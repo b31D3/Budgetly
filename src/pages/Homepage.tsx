@@ -1,7 +1,7 @@
 import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
 import Divider from "@/components/Divider";
-import CalculatorForm from "@/components/CalculatorForm";
+import CalculatorFormImproved from "@/components/CalculatorFormImproved";
 
 const Homepage = () => {
   return (
@@ -16,7 +16,7 @@ const Homepage = () => {
       <Divider />
 
       {/* Calculator Form */}
-      <CalculatorForm />
+      <CalculatorFormImproved />
     </div>
   );
 };
