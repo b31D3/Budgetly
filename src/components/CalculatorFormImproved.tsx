@@ -34,8 +34,10 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ChevronRight, ChevronLeft, Download, Settings, ChevronDown, TrendingUp, Lock } from "lucide-react";
+import { ChevronRight, ChevronLeft, Download, Settings, ChevronDown, TrendingUp, Lock, Save } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 // UI Components
 import { Button } from "@/components/ui/button";
@@ -63,8 +65,12 @@ import {
 import { calculatorFormSchema, type CalculatorFormData } from "@/lib/validation";
 import { calculateSemesterBreakdown, calculateSummary, type SemesterData } from "@/lib/calculator";
 import { useFormPersistence } from "@/hooks/useFormPersistence";
+import { saveCalculation } from "@/services/calculatorService";
 
 const CalculatorFormImproved = () => {
+  const navigate = useNavigate();
+  const { currentUser } = useAuth();
+  const [isSaving, setIsSaving] = useState(false);
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [includeTaxes, setIncludeTaxes] = useState(false);
@@ -126,8 +132,15 @@ const CalculatorFormImproved = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run once on mount
 
-  // Load scenario usage flag from localStorage on mount
+  // Load scenario usage flag from localStorage on mount (only for non-authenticated users)
   useEffect(() => {
+    // Signed-in users get unlimited scenarios
+    if (currentUser) {
+      setScenarioUsed(false);
+      return;
+    }
+
+    // Check localStorage for unsigned users
     try {
       const usedFlag = localStorage.getItem("budgetly_scenario_used");
       if (usedFlag === "true") {
@@ -136,7 +149,7 @@ const CalculatorFormImproved = () => {
     } catch (error) {
       console.warn("Could not load scenario usage flag:", error);
     }
-  }, []);
+  }, [currentUser]);
 
   // Auto-save form data when it changes (debounced)
   const formData = watch();
@@ -278,6 +291,94 @@ const CalculatorFormImproved = () => {
     toast.success("Report downloaded successfully!");
   }, [semesterData, summary]);
 
+  // Save calculation to Firebase
+  const handleSaveCalculation = useCallback(async () => {
+    if (!currentUser) {
+      toast.error("Please sign in to save your calculation");
+      navigate("/signin");
+      return;
+    }
+
+    if (semesterData.length === 0) {
+      toast.error("Please complete the calculation first");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const values = getValues();
+
+      // Validate that we have semester data
+      if (!semesterData || semesterData.length === 0) {
+        toast.error("No calculation data found. Please complete the calculation first.");
+        setIsSaving(false);
+        return;
+      }
+
+      // Calculate total cost from semester data
+      const totalCost = summary.totalCosts;
+      const totalCredits = parseInt(values.semestersLeft || "0") * 15; // Assuming ~15 credits per semester
+      const costPerCredit = totalCredits > 0 ? totalCost / totalCredits : 0;
+      const yearsToGraduate = parseInt(values.semestersLeft || "0") / 2; // Convert semesters to years
+      const costPerYear = yearsToGraduate > 0 ? totalCost / yearsToGraduate : 0;
+
+      // Get current balance (first semester balance or savings)
+      const currentBalance = parseFloat(values.savings || "0");
+
+      // Get remaining semesters
+      const remainingSemesters = parseInt(values.semestersLeft || "0");
+
+      // Get projected balance (final balance from summary)
+      const projectedBalance = summary.finalBalance;
+
+      console.log("Saving calculation...", {
+        userId: currentUser.uid,
+        remainingSemesters,
+        projectedBalance,
+        semesterDataLength: semesterData.length
+      });
+
+      const docId = await saveCalculation({
+        userId: currentUser.uid,
+        tuition: parseFloat(values.tuition || "0"),
+        creditsPerSemester: 15,
+        semestersPerYear: 2,
+        yearsToGraduate,
+        housingCost: (parseFloat(values.rent || "0") * 12), // Annual housing cost
+        mealPlanCost: (parseFloat(values.groceries || "0") * 12), // Annual meal cost
+        booksCost: (parseFloat(values.books || "0") * 2), // Annual books cost (per semester × 2 semesters)
+        transportationCost: (parseFloat(values.transportation || "0") * 12), // Annual transportation
+        otherExpenses: (parseFloat(values.utilities || "0") * 12) + (parseFloat(values.memberships || "0") * 12) + (parseFloat(values.cellPhone || "0") * 12), // Annual other expenses (utilities, cell phone, memberships)
+        totalCost,
+        costPerCredit,
+        costPerYear,
+        currentBalance,
+        remainingSemesters,
+        projectedBalance,
+        semesterData: semesterData.map(s => ({
+          semesterLabel: s.semesterLabel,
+          balance: s.balance,
+          costs: s.costs,
+          income: s.totalIncome,
+          isSummer: s.isSummer
+        })),
+      });
+
+      console.log("Calculation saved with ID:", docId);
+      toast.success("Calculation saved successfully!");
+
+      // Optional: Navigate to dashboard after saving
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 1500);
+    } catch (error) {
+      console.error("Error saving calculation:", error);
+      toast.error("Failed to save calculation");
+    } finally {
+      setIsSaving(false);
+    }
+  }, [currentUser, semesterData, summary, getValues, navigate]);
+
   return (
     <section id="calculator" className="w-full bg-background py-16 lg:py-24">
       <div className="container mx-auto px-6">
@@ -393,7 +494,7 @@ const CalculatorFormImproved = () => {
 
                     {/* Books input */}
                     <div className="flex items-center gap-4">
-                      <span className="text-body min-w-[160px]">Books</span>
+                      <span className="text-body min-w-[160px]">Books (per semester)</span>
                       <div className="relative flex-1">
                         <div className="absolute left-3 top-1/2 -translate-y-1/2 dollar-badge">$</div>
                         <input
@@ -1276,17 +1377,33 @@ const CalculatorFormImproved = () => {
                     <ChevronLeft className="w-5 h-5 mr-2" />
                     Back
                   </Button>
-                  <Button
-                    type="button"
-                    variant="next"
-                    size="lg"
-                    className="px-6"
-                    onClick={handleDownloadReport}
-                    aria-label="Download financial report as CSV"
-                  >
-                    <Download className="w-5 h-5 mr-2" />
-                    <span>Download Report (CSV)</span>
-                  </Button>
+                  <div className="flex gap-3">
+                    {currentUser && (
+                      <Button
+                        type="button"
+                        variant="default"
+                        size="lg"
+                        className="px-6"
+                        onClick={handleSaveCalculation}
+                        disabled={isSaving}
+                        aria-label="Save calculation to your account"
+                      >
+                        <Save className="w-5 h-5 mr-2" />
+                        <span>{isSaving ? "Saving..." : "Save Calculation"}</span>
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="next"
+                      size="lg"
+                      className="px-6"
+                      onClick={handleDownloadReport}
+                      aria-label="Download financial report as CSV"
+                    >
+                      <Download className="w-5 h-5 mr-2" />
+                      <span>Download Report (CSV)</span>
+                    </Button>
+                  </div>
                 </div>
               </>
             )}
@@ -1301,7 +1418,7 @@ const CalculatorFormImproved = () => {
               </div>
 
               <p className="text-body mb-6">
-                See how changes to your finances would affect your graduation balance. Unsigned users can simulate one scenario for free.
+                See how changes to your finances would affect your graduation balance. {currentUser ? "Signed-in users get unlimited scenario simulations!" : "Unsigned users can simulate one scenario for free."}
               </p>
 
               {!showScenario ? (
@@ -1317,7 +1434,12 @@ const CalculatorFormImproved = () => {
                           <p className="text-sm text-body mb-4">
                             Sign in to unlock unlimited scenario simulations and compare multiple financial forecasts side-by-side.
                           </p>
-                          <Button variant="default" size="lg" className="font-semibold">
+                          <Button
+                            variant="default"
+                            size="lg"
+                            className="font-semibold"
+                            onClick={() => navigate("/signin")}
+                          >
                             Sign In to Unlock Unlimited Scenarios
                           </Button>
                         </div>
@@ -1332,12 +1454,14 @@ const CalculatorFormImproved = () => {
                           setShowScenario(true);
                           setScenarioType("tuition-increase");
                           setScenarioValue("3");
-                          // Mark scenario as used and persist to localStorage
-                          setScenarioUsed(true);
-                          try {
-                            localStorage.setItem("budgetly_scenario_used", "true");
-                          } catch (error) {
-                            console.warn("Could not save scenario usage flag:", error);
+                          // Mark scenario as used and persist to localStorage (only for unsigned users)
+                          if (!currentUser) {
+                            setScenarioUsed(true);
+                            try {
+                              localStorage.setItem("budgetly_scenario_used", "true");
+                            } catch (error) {
+                              console.warn("Could not save scenario usage flag:", error);
+                            }
                           }
                         }}
                         className="text-left p-6 border-2 border-border rounded-lg hover:border-primary hover:bg-accent transition-all"
@@ -1351,12 +1475,14 @@ const CalculatorFormImproved = () => {
                           setShowScenario(true);
                           setScenarioType("more-summer-hours");
                           setScenarioValue("40");
-                          // Mark scenario as used and persist to localStorage
-                          setScenarioUsed(true);
-                          try {
-                            localStorage.setItem("budgetly_scenario_used", "true");
-                          } catch (error) {
-                            console.warn("Could not save scenario usage flag:", error);
+                          // Mark scenario as used and persist to localStorage (only for unsigned users)
+                          if (!currentUser) {
+                            setScenarioUsed(true);
+                            try {
+                              localStorage.setItem("budgetly_scenario_used", "true");
+                            } catch (error) {
+                              console.warn("Could not save scenario usage flag:", error);
+                            }
                           }
                         }}
                         className="text-left p-6 border-2 border-border rounded-lg hover:border-primary hover:bg-accent transition-all"
@@ -1370,12 +1496,14 @@ const CalculatorFormImproved = () => {
                           setShowScenario(true);
                           setScenarioType("higher-rent");
                           setScenarioValue("10");
-                          // Mark scenario as used and persist to localStorage
-                          setScenarioUsed(true);
-                          try {
-                            localStorage.setItem("budgetly_scenario_used", "true");
-                          } catch (error) {
-                            console.warn("Could not save scenario usage flag:", error);
+                          // Mark scenario as used and persist to localStorage (only for unsigned users)
+                          if (!currentUser) {
+                            setScenarioUsed(true);
+                            try {
+                              localStorage.setItem("budgetly_scenario_used", "true");
+                            } catch (error) {
+                              console.warn("Could not save scenario usage flag:", error);
+                            }
                           }
                         }}
                         className="text-left p-6 border-2 border-border rounded-lg hover:border-primary hover:bg-accent transition-all"
@@ -1389,12 +1517,14 @@ const CalculatorFormImproved = () => {
                           setShowScenario(true);
                           setScenarioType("more-scholarship");
                           setScenarioValue((parseFloat(watch("scholarship") || "0") + 1000).toString());
-                          // Mark scenario as used and persist to localStorage
-                          setScenarioUsed(true);
-                          try {
-                            localStorage.setItem("budgetly_scenario_used", "true");
-                          } catch (error) {
-                            console.warn("Could not save scenario usage flag:", error);
+                          // Mark scenario as used and persist to localStorage (only for unsigned users)
+                          if (!currentUser) {
+                            setScenarioUsed(true);
+                            try {
+                              localStorage.setItem("budgetly_scenario_used", "true");
+                            } catch (error) {
+                              console.warn("Could not save scenario usage flag:", error);
+                            }
                           }
                         }}
                         className="text-left p-6 border-2 border-border rounded-lg hover:border-primary hover:bg-accent transition-all"
@@ -1535,7 +1665,12 @@ const CalculatorFormImproved = () => {
                         <p className="text-sm text-body mb-4">
                           Sign in to compare multiple scenarios, save your forecasts, and access advanced planning tools.
                         </p>
-                        <Button variant="default" size="lg" className="font-semibold">
+                        <Button
+                          variant="default"
+                          size="lg"
+                          className="font-semibold"
+                          onClick={() => navigate("/signin")}
+                        >
                           Sign In to Unlock
                         </Button>
                       </div>

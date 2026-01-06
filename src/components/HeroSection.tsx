@@ -51,7 +51,7 @@ const HeroSection = () => {
           <div className="w-full flex items-center justify-end overflow-hidden animate-fade-in order-first md:order-last" style={{
           animationDelay: "0.2s"
         }}>
-            <img src={heroIllustration} alt="Budgetly financial planning journey - from inputs to graduation" className="w-full h-auto max-w-lg lg:max-w-xl translate-x-3" />
+            <img src={heroIllustration} alt="Budgetly financial planning journey - from inputs to graduation" className="w-full h-auto max-w-lg lg:max-w-xl translate-x-2" />
           </div>
         </div>
       </div>
