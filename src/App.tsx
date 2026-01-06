@@ -10,6 +10,7 @@ import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import Dashboard from "./pages/Dashboard";
 import Calculator from "./pages/Calculator";
+import Scenarios from "./pages/Scenarios";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/scenarios"
+              element={
+                <ProtectedRoute>
+                  <Scenarios />
                 </ProtectedRoute>
               }
             />

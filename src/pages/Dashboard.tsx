@@ -337,7 +337,7 @@ const Dashboard = () => {
               My finances
             </button>
             <button
-              onClick={() => navigate("/calculator")}
+              onClick={() => navigate("/scenarios")}
               className={`flex items-center gap-2 px-4 py-4 border-b-2 transition-colors border-transparent text-muted-foreground hover:text-foreground`}
             >
               <Sliders className="w-5 h-5" />

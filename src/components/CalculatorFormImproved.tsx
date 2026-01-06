@@ -67,7 +67,11 @@ import { calculateSemesterBreakdown, calculateSummary, type SemesterData } from 
 import { useFormPersistence } from "@/hooks/useFormPersistence";
 import { saveCalculation } from "@/services/calculatorService";
 
-const CalculatorFormImproved = () => {
+interface CalculatorFormImprovedProps {
+  editMode?: boolean; // If true, shows 3 steps + save button. If false, shows 4 steps with results
+}
+
+const CalculatorFormImproved = ({ editMode = false }: CalculatorFormImprovedProps) => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
@@ -171,7 +175,8 @@ const CalculatorFormImproved = () => {
 
   // Memoized calculation - only recalculates when dependencies change
   const semesterData = useMemo<SemesterData[]>(() => {
-    if (currentStep !== 4) return [];
+    // In edit mode, always calculate for saving. In calculator mode, only on step 4
+    if (!editMode && currentStep !== 4) return [];
 
     const values = getValues();
     return calculateSemesterBreakdown(values as any, {
@@ -180,7 +185,7 @@ const CalculatorFormImproved = () => {
       includeInflation: false,
       inflationRate: 0,
     });
-  }, [currentStep, formData, includeTaxes, getValues]);
+  }, [currentStep, formData, includeTaxes, getValues, editMode]);
 
   // Memoized summary statistics
   const summary = useMemo(() => calculateSummary(semesterData), [semesterData]);
@@ -362,6 +367,28 @@ const CalculatorFormImproved = () => {
           income: s.totalIncome,
           isSummer: s.isSummer
         })),
+        // Save raw form inputs so they can be restored later
+        formInputs: {
+          studentType: values.studentType,
+          semestersLeft: values.semestersLeft,
+          books: values.books,
+          supplies: values.supplies,
+          housing: values.housing,
+          rent: values.rent,
+          utilities: values.utilities,
+          groceries: values.groceries,
+          cellPhone: values.cellPhone,
+          transportation: values.transportation,
+          memberships: values.memberships,
+          hasJob: values.hasJob,
+          hoursPerWeekSchool: values.hoursPerWeekSchool,
+          hoursPerWeekSummer: values.hoursPerWeekSummer,
+          hourlyRate: values.hourlyRate,
+          scholarship: values.scholarship,
+          bursary: values.bursary,
+          grant: values.grant,
+          savings: values.savings,
+        },
       });
 
       console.log("Calculation saved with ID:", docId);
@@ -379,20 +406,22 @@ const CalculatorFormImproved = () => {
     }
   }, [currentUser, semesterData, summary, getValues, navigate]);
 
+  const maxSteps = editMode ? 3 : 4;
+
   return (
     <section id="calculator" className="w-full bg-background py-16 lg:py-24">
       <div className="container mx-auto px-6">
         {/* Section title */}
         <h2 ref={calculatorTitleRef} className="text-3xl lg:text-4xl font-bold text-center text-heading mb-12 animate-fade-in">
-          Calculate your cash flow
+          {editMode ? "Edit your inputs" : "Calculate your cash flow"}
         </h2>
 
         {/* Form card */}
         <div className="max-w-3xl mx-auto">
           <div className="bg-form rounded-3xl p-8 lg:p-10 shadow-sm animate-slide-up">
             {/* Progress dots */}
-            <div className="flex justify-center gap-2 mb-8" role="progressbar" aria-valuenow={currentStep} aria-valuemin={1} aria-valuemax={4}>
-              {[1, 2, 3, 4].map((step) => (
+            <div className="flex justify-center gap-2 mb-8" role="progressbar" aria-valuenow={currentStep} aria-valuemin={1} aria-valuemax={maxSteps}>
+              {Array.from({ length: maxSteps }, (_, i) => i + 1).map((step) => (
                 <div
                   key={step}
                   className={`progress-dot ${
@@ -980,26 +1009,41 @@ const CalculatorFormImproved = () => {
                     <ChevronLeft className="w-5 h-5 mr-2" />
                     Back
                   </Button>
-                  <Button
-                    type="button"
-                    variant="next"
-                    size="lg"
-                    className="group px-6"
-                    onClick={handleNextStep}
-                    aria-label="View Results"
-                  >
-                    <div className="flex flex-col items-start mr-2">
-                      <span className="text-xs text-primary-foreground/70">Next step</span>
-                      <span className="font-semibold">Results</span>
-                    </div>
-                    <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                  </Button>
+                  {editMode ? (
+                    <Button
+                      type="button"
+                      variant="default"
+                      size="lg"
+                      className="px-8 bg-red-500 hover:bg-red-600 text-white"
+                      onClick={handleSaveCalculation}
+                      disabled={isSaving}
+                      aria-label="Save your inputs"
+                    >
+                      <Save className="w-5 h-5 mr-2" />
+                      <span>{isSaving ? "Saving..." : "Save"}</span>
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="next"
+                      size="lg"
+                      className="group px-6"
+                      onClick={handleNextStep}
+                      aria-label="View Results"
+                    >
+                      <div className="flex flex-col items-start mr-2">
+                        <span className="text-xs text-primary-foreground/70">Next step</span>
+                        <span className="font-semibold">Results</span>
+                      </div>
+                      <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                    </Button>
+                  )}
                 </div>
               </form>
             )}
 
-            {/* Step 4: Results */}
-            {currentStep === 4 && (
+            {/* Step 4: Results - Only show in calculator mode */}
+            {!editMode && currentStep === 4 && (
               <>
                 <div className="mb-8">
                   <span className="text-sm font-medium text-muted-foreground">Step 4</span>
@@ -1409,8 +1453,8 @@ const CalculatorFormImproved = () => {
             )}
           </div>
 
-          {/* SCENARIO SIMULATION - Separate Card Below Results */}
-          {currentStep === 4 && (
+          {/* SCENARIO SIMULATION - Separate Card Below Results - Only in calculator mode */}
+          {!editMode && currentStep === 4 && (
             <div className="bg-form rounded-3xl p-8 lg:p-10 shadow-sm mt-8 animate-slide-up">
               <div className="flex items-center gap-3 mb-6">
                 <TrendingUp className="w-6 h-6 text-primary" />

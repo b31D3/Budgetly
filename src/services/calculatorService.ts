@@ -4,6 +4,8 @@ import { collection, addDoc, getDocs, query, where, orderBy, deleteDoc, doc, Tim
 export interface CalculationData {
   id?: string;
   userId: string;
+
+  // Calculated values
   tuition: number;
   creditsPerSemester: number;
   semestersPerYear: number;
@@ -16,11 +18,34 @@ export interface CalculationData {
   totalCost: number;
   costPerCredit: number;
   costPerYear: number;
-  // New fields for dashboard
   currentBalance: number;
   remainingSemesters: number;
   projectedBalance: number;
   semesterData?: any[]; // Store semester-by-semester breakdown
+
+  // Raw form inputs - needed to restore the form
+  formInputs?: {
+    studentType?: string;
+    semestersLeft?: string;
+    books?: string;
+    supplies?: string;
+    housing?: string;
+    rent?: string;
+    utilities?: string;
+    groceries?: string;
+    cellPhone?: string;
+    transportation?: string;
+    memberships?: string;
+    hasJob?: string;
+    hoursPerWeekSchool?: string;
+    hoursPerWeekSummer?: string;
+    hourlyRate?: string;
+    scholarship?: string;
+    bursary?: string;
+    grant?: string;
+    savings?: string;
+  };
+
   createdAt: Date;
 }
 
