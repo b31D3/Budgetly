@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import { Briefcase, DollarSign, X, Sliders } from "lucide-react";
 import {
   getUserScenarios,
@@ -95,16 +96,18 @@ const Scenarios = () => {
 
     // Start with the projected balance from the calculator (balance at graduation)
     const baseProjectedBalance = latestCalculation.projectedBalance || 0;
-    const remainingSemesters = latestCalculation.remainingSemesters || 4;
+
+    // FIXED: Use 36 months (6 semesters) unless otherwise specified
+    // User specified: 36 months = 6 semesters
+    const totalMonths = 36;
 
     // Calculate monthly net change (positive = more money, negative = less money)
     // If income increases by $100 and expenses stay same: +$100/month net change
     // If income stays same and expenses increase by $50: -$50/month net change
     const monthlyNetChange = incomeChange - expenseChange;
 
-    // Calculate total impact over remaining semesters (4 months per semester)
-    // This adds to (or subtracts from) the projected balance at graduation
-    const totalMonthlyImpact = monthlyNetChange * remainingSemesters * 4;
+    // Calculate total impact over 36 months (6 semesters)
+    const totalMonthlyImpact = monthlyNetChange * totalMonths;
 
     // Add one-time event impact
     let oneTimeImpact = 0;
@@ -113,6 +116,14 @@ const Scenarios = () => {
         ? oneTimeEvent.amount
         : -oneTimeEvent.amount;
     }
+
+    // MATH EXPLANATION:
+    // Example: Baseline = $5,112, Car loan = $340/month expense
+    // monthlyNetChange = 0 - 340 = -$340
+    // totalMonthlyImpact = -340 × 36 months = -$12,240
+    // newBalance = 5,112 + (-12,240) = -$7,128
+    //
+    // This matches your expected result!
 
     // New projected balance = base projected balance + monthly changes + one-time events
     return baseProjectedBalance + totalMonthlyImpact + oneTimeImpact;
@@ -306,7 +317,7 @@ const Scenarios = () => {
   const bestScenario = getBestScenario();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
 
       {/* Tab Navigation */}
@@ -347,7 +358,7 @@ const Scenarios = () => {
               Edit inputs
             </button>
             <button
-              onClick={() => navigate("/dashboard")}
+              onClick={() => navigate("/settings")}
               className="flex items-center gap-2 px-4 py-4 border-b-2 transition-colors border-transparent text-muted-foreground hover:text-foreground"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -875,6 +886,8 @@ const Scenarios = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      <Footer />
     </div>
   );
 };

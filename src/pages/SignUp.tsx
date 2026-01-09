@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import logo from "@/assets/logo.png";
 import { Link } from "react-router-dom";
+import Footer from "@/components/Footer";
 
 const SignUp = () => {
   const [firstName, setFirstName] = useState("");
@@ -62,8 +63,9 @@ const SignUp = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-background to-muted">
+      <div className="flex-grow flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 flex flex-col items-center">
           <Link to="/" className="mb-4">
             <img src={logo} alt="Budgetly" className="h-12" />
@@ -202,6 +204,8 @@ const SignUp = () => {
           </div>
         </CardContent>
       </Card>
+      </div>
+      <Footer />
     </div>
   );
 };

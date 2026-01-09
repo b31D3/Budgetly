@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { getUserCalculations, type CalculationData } from "@/services/calculatorService";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import { AlertTriangle, Sliders, X } from "lucide-react";
 import {
   LineChart,
@@ -38,9 +39,18 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 const Dashboard = () => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [calculations, setCalculations] = useState<CalculationData[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
+
+  // Handle tab parameter from URL
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam === "finances") {
+      setActiveTab("finances");
+    }
+  }, [searchParams]);
   const [showAddTransaction, setShowAddTransaction] = useState(false);
   const [transactionType, setTransactionType] = useState("expense");
   const [transactionName, setTransactionName] = useState("");
@@ -303,7 +313,7 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
 
       {/* Tab Navigation */}
@@ -353,12 +363,8 @@ const Dashboard = () => {
               Edit inputs
             </button>
             <button
-              onClick={() => setActiveTab("settings")}
-              className={`flex items-center gap-2 px-4 py-4 border-b-2 transition-colors ${
-                activeTab === "settings"
-                  ? "border-primary text-primary font-medium"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
+              onClick={() => navigate("/settings")}
+              className="flex items-center gap-2 px-4 py-4 border-b-2 transition-colors border-transparent text-muted-foreground hover:text-foreground"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -559,7 +565,7 @@ const Dashboard = () => {
                         variant="default"
                         size="lg"
                         className="w-full bg-red-500 hover:bg-red-600"
-                        onClick={() => navigate("/calculator")}
+                        onClick={() => navigate("/scenarios")}
                       >
                         <Sliders className="w-5 h-5 mr-2" />
                         Scenarios
@@ -1014,13 +1020,6 @@ const Dashboard = () => {
         </div>
       )}
 
-      {activeTab === "settings" && (
-        <div className="container mx-auto px-12 py-6">
-          <h2 className="text-2xl font-bold mb-4">Settings</h2>
-          <p className="text-muted-foreground">Coming soon...</p>
-        </div>
-      )}
-
       {/* Add Transaction Modal */}
       <Dialog open={showAddTransaction} onOpenChange={setShowAddTransaction}>
         <DialogContent className="max-w-xl p-8">
@@ -1136,6 +1135,8 @@ const Dashboard = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <Footer />
     </div>
   );
 };

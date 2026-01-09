@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import CalculatorFormImproved from "@/components/CalculatorFormImproved";
 import { useAuth } from "@/contexts/AuthContext";
 import { getUserCalculations } from "@/services/calculatorService";
@@ -97,7 +98,7 @@ const Calculator = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
 
       {/* Tab Navigation */}
@@ -138,7 +139,7 @@ const Calculator = () => {
               Edit inputs
             </button>
             <button
-              onClick={() => navigate("/dashboard")}
+              onClick={() => navigate("/settings")}
               className="flex items-center gap-2 px-4 py-4 border-b-2 transition-colors border-transparent text-muted-foreground hover:text-foreground"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -152,6 +153,8 @@ const Calculator = () => {
       </div>
 
       <CalculatorFormImproved editMode={true} />
+
+      <Footer />
     </div>
   );
 };

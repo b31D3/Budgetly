@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,19 +13,24 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/ui/select-custom";
 import { Sliders, Settings as SettingsIcon } from "lucide-react";
 import { updateProfile, updateEmail } from "firebase/auth";
+import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import { storage } from "@/lib/firebase";
 
 const Settings = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Profile states
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [school, setSchool] = useState("");
+  const [profilePictureUrl, setProfilePictureUrl] = useState("");
 
   // Preference states
   const [currency, setCurrency] = useState("CAD");
@@ -35,6 +41,7 @@ const Settings = () => {
     if (currentUser) {
       setFullName(currentUser.displayName || "");
       setEmail(currentUser.email || "");
+      setProfilePictureUrl(currentUser.photoURL || "");
 
       // Load preferences from localStorage
       const savedPreferences = localStorage.getItem("budgetly_preferences");
@@ -47,6 +54,86 @@ const Settings = () => {
       }
     }
   }, [currentUser]);
+
+  const handleUpdatePicture = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !currentUser) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image size should be less than 5MB");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      // Create a reference to the storage location
+      const storageRef = ref(storage, `profile-pictures/${currentUser.uid}/${Date.now()}_${file.name}`);
+
+      // Upload the file
+      await uploadBytes(storageRef, file);
+
+      // Get the download URL
+      const downloadURL = await getDownloadURL(storageRef);
+
+      // Update user profile with new photo URL
+      await updateProfile(currentUser, {
+        photoURL: downloadURL,
+      });
+
+      setProfilePictureUrl(downloadURL);
+      toast.success("Profile picture updated successfully!");
+    } catch (error) {
+      console.error("Error uploading profile picture:", error);
+      toast.error("Failed to upload profile picture");
+    } finally {
+      setUploading(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleRemovePicture = async () => {
+    if (!currentUser) return;
+
+    setUploading(true);
+    try {
+      // Delete the old photo from storage if it exists
+      if (currentUser.photoURL && currentUser.photoURL.includes("firebase")) {
+        try {
+          const oldPhotoRef = ref(storage, currentUser.photoURL);
+          await deleteObject(oldPhotoRef);
+        } catch (error) {
+          console.log("Old photo deletion skipped:", error);
+        }
+      }
+
+      // Update user profile to remove photo URL
+      await updateProfile(currentUser, {
+        photoURL: "",
+      });
+
+      setProfilePictureUrl("");
+      toast.success("Profile picture removed successfully!");
+    } catch (error) {
+      console.error("Error removing profile picture:", error);
+      toast.error("Failed to remove profile picture");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSaveProfile = async () => {
     if (!currentUser) return;
@@ -106,7 +193,7 @@ const Settings = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
 
       {/* Tab Navigation */}
@@ -123,7 +210,7 @@ const Settings = () => {
               Dashboard
             </button>
             <button
-              onClick={() => navigate("/dashboard")}
+              onClick={() => navigate("/dashboard?tab=finances")}
               className="flex items-center gap-2 px-4 py-4 border-b-2 transition-colors border-transparent text-muted-foreground hover:text-foreground"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -175,12 +262,12 @@ const Settings = () => {
               <div>
                 <Label className="text-base font-semibold mb-3 block">Profile picture</Label>
                 <div className="flex items-center gap-4">
-                  <div className="w-20 h-20 rounded-full bg-gray-300 flex items-center justify-center">
-                    {currentUser.photoURL ? (
+                  <div className="w-20 h-20 rounded-full bg-gray-300 flex items-center justify-center overflow-hidden">
+                    {profilePictureUrl ? (
                       <img
-                        src={currentUser.photoURL}
+                        src={profilePictureUrl}
                         alt="Profile"
-                        className="w-full h-full rounded-full object-cover"
+                        className="w-full h-full object-cover"
                       />
                     ) : (
                       <svg className="w-12 h-12 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
@@ -189,10 +276,27 @@ const Settings = () => {
                     )}
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" disabled>
-                      Update picture
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleUpdatePicture}
+                      disabled={uploading}
+                    >
+                      {uploading ? "Uploading..." : "Update picture"}
                     </Button>
-                    <Button variant="outline" size="sm" disabled>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRemovePicture}
+                      disabled={uploading || !profilePictureUrl}
+                    >
                       Remove
                     </Button>
                   </div>
@@ -349,6 +453,8 @@ const Settings = () => {
           </div>
         </div>
       </div>
+
+      <Footer />
     </div>
   );
 };
