@@ -12,6 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import Calculator from "./pages/Calculator";
 import Scenarios from "./pages/Scenarios";
 import Settings from "./pages/Settings";
+import Admin from "./pages/Admin";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfUse from "./pages/TermsOfUse";
 import Disclaimer from "./pages/Disclaimer";
@@ -52,6 +53,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Settings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <Admin />
                 </ProtectedRoute>
               }
             />

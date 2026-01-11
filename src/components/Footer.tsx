@@ -4,6 +4,8 @@ import { toast } from "sonner";
 import logo from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { db } from "@/lib/firebase";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -20,12 +22,22 @@ const Footer = () => {
 
     setIsSubmitting(true);
 
-    // Simulate feedback submission (you can integrate with an actual backend later)
-    setTimeout(() => {
+    try {
+      // Save feedback to Firestore
+      await addDoc(collection(db, "feedback"), {
+        message: feedback.trim(),
+        timestamp: serverTimestamp(),
+        userAgent: navigator.userAgent,
+      });
+
       toast.success("Thank you for your feedback! We'll review it shortly.");
       setFeedback("");
+    } catch (error) {
+      console.error("Error submitting feedback:", error);
+      toast.error("Failed to submit feedback. Please try again.");
+    } finally {
       setIsSubmitting(false);
-    }, 1000);
+    }
   };
 
   return (

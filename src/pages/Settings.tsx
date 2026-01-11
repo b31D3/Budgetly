@@ -198,8 +198,8 @@ const Settings = () => {
 
       {/* Tab Navigation */}
       <div className="border-b border-border">
-        <div className="container mx-auto">
-          <div className="flex gap-8 justify-center">
+        <div className="container mx-auto px-4 overflow-x-auto">
+          <div className="flex gap-4 md:gap-8 justify-center min-w-max md:min-w-0">
             <button
               onClick={() => navigate("/dashboard")}
               className="flex items-center gap-2 px-4 py-4 border-b-2 transition-colors border-transparent text-muted-foreground hover:text-foreground"
@@ -245,7 +245,7 @@ const Settings = () => {
       </div>
 
       {/* Settings Content */}
-      <div className="container mx-auto px-12 py-8">
+      <div className="container mx-auto px-4 md:px-8 lg:px-12 py-8">
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-2">Settings</h1>
           <p className="text-muted-foreground text-lg">Manage your account & preference</p>

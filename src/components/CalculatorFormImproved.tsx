@@ -34,7 +34,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ChevronRight, ChevronLeft, Download, Settings, ChevronDown, TrendingUp, Lock, Save } from "lucide-react";
+import { ChevronRight, ChevronLeft, Download, Settings, ChevronDown, TrendingUp, Lock, Save, Maximize2, Minimize2, GraduationCap, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -78,6 +78,7 @@ const CalculatorFormImproved = ({ editMode = false }: CalculatorFormImprovedProp
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [includeTaxes, setIncludeTaxes] = useState(false);
+  const [isGraphFullscreen, setIsGraphFullscreen] = useState(false);
 
   // Scenario simulation state
   const [showScenario, setShowScenario] = useState(false);
@@ -87,6 +88,7 @@ const CalculatorFormImproved = ({ editMode = false }: CalculatorFormImprovedProp
 
   // Ref for scrolling to calculator title
   const calculatorTitleRef = useRef<HTMLHeadingElement>(null);
+
 
   // Initialize React Hook Form with Zod validation
   const {
@@ -522,8 +524,8 @@ const CalculatorFormImproved = ({ editMode = false }: CalculatorFormImprovedProp
                     <Label className="text-base font-medium text-heading">Course material</Label>
 
                     {/* Books input */}
-                    <div className="flex items-center gap-4">
-                      <span className="text-body min-w-[160px]">Books (per semester)</span>
+                    <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
+                      <span className="text-body md:min-w-[160px]">Books (per semester)</span>
                       <div className="relative flex-1">
                         <div className="absolute left-3 top-1/2 -translate-y-1/2 dollar-badge">$</div>
                         <input
@@ -539,8 +541,8 @@ const CalculatorFormImproved = ({ editMode = false }: CalculatorFormImprovedProp
                     </div>
 
                     {/* Supplies input */}
-                    <div className="flex items-center gap-4">
-                      <span className="text-body min-w-[160px]">Supplies & Equipment</span>
+                    <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
+                      <span className="text-body md:min-w-[160px]">Supplies & Equipment</span>
                       <div className="relative flex-1">
                         <div className="absolute left-3 top-1/2 -translate-y-1/2 dollar-badge">$</div>
                         <input
@@ -1044,7 +1046,7 @@ const CalculatorFormImproved = ({ editMode = false }: CalculatorFormImprovedProp
 
             {/* Step 4: Results - Only show in calculator mode */}
             {!editMode && currentStep === 4 && (
-              <>
+              <div className="step-4-results">
                 <div className="mb-8">
                   <span className="text-sm font-medium text-muted-foreground">Step 4</span>
                   <h3 className="text-2xl font-bold text-heading mt-1">Your Financial Forecast</h3>
@@ -1075,35 +1077,49 @@ const CalculatorFormImproved = ({ editMode = false }: CalculatorFormImprovedProp
 
                   {/* Chart visualization */}
                   <div className="space-y-4">
-                    <div className="border-2 border-border rounded-lg p-6 bg-white">
-                      <ResponsiveContainer width="100%" height={600}>
-                        <LineChart
-                          data={semesterData.map((s) => ({
-                            semester: s.semesterLabel,
-                            availableFunds: s.availableFunds,
-                            expenses: s.costs,
-                            balance: s.balance,
-                          }))}
-                          margin={{ top: 30, right: 30, left: 80, bottom: 100 }}
-                        >
-                          <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                          <XAxis
-                            dataKey="semester"
-                            label={{ value: 'Semester', position: 'insideBottom', offset: -25, style: { fontSize: 18, fontWeight: 'bold', fill: '#374151' } }}
-                            tick={{ fill: '#374151', fontSize: 14, fontWeight: 600 }}
-                            axisLine={{ stroke: '#374151', strokeWidth: 2 }}
-                            tickLine={{ stroke: '#374151', strokeWidth: 2 }}
-                            angle={-45}
-                            textAnchor="end"
-                            height={100}
-                          />
-                          <YAxis
-                            label={{ value: 'Money ($)', angle: -90, position: 'insideLeft', offset: -40, style: { fontSize: 18, fontWeight: 'bold', fill: '#374151' } }}
-                            tick={{ fill: '#374151', fontSize: 16, fontWeight: 600 }}
-                            axisLine={{ stroke: '#374151', strokeWidth: 2 }}
-                            tickLine={{ stroke: '#374151', strokeWidth: 2 }}
-                            tickFormatter={(value) => `$${value.toLocaleString()}`}
-                          />
+                    <div className="border-2 border-border rounded-lg p-3 md:p-6 bg-white relative">
+                      {/* Fullscreen toggle button */}
+                      <button
+                        onClick={() => setIsGraphFullscreen(!isGraphFullscreen)}
+                        className="absolute top-2 right-2 z-10 p-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors md:hidden"
+                        aria-label={isGraphFullscreen ? "Exit fullscreen" : "View fullscreen"}
+                      >
+                        {isGraphFullscreen ? (
+                          <Minimize2 className="w-5 h-5" />
+                        ) : (
+                          <Maximize2 className="w-5 h-5" />
+                        )}
+                      </button>
+                      <div className="w-full h-[450px] md:h-[600px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart
+                            data={semesterData.map((s) => ({
+                              semester: s.semesterLabel,
+                              availableFunds: s.availableFunds,
+                              expenses: s.costs,
+                              balance: s.balance,
+                            }))}
+                            margin={{ top: 20, right: 15, left: 5, bottom: 70 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                            <XAxis
+                              dataKey="semester"
+                              label={{ value: 'Semester', position: 'insideBottom', offset: -20, style: { fontSize: 14, fontWeight: 'bold', fill: '#374151' } }}
+                              tick={{ fill: '#374151', fontSize: 11, fontWeight: 600 }}
+                              axisLine={{ stroke: '#374151', strokeWidth: 2 }}
+                              tickLine={{ stroke: '#374151', strokeWidth: 2 }}
+                              angle={-45}
+                              textAnchor="end"
+                              height={85}
+                            />
+                            <YAxis
+                              label={{ value: 'Money ($)', angle: -90, position: 'insideLeft', offset: -5, style: { fontSize: 14, fontWeight: 'bold', fill: '#374151' } }}
+                              tick={{ fill: '#374151', fontSize: 11, fontWeight: 600 }}
+                              axisLine={{ stroke: '#374151', strokeWidth: 2 }}
+                              tickLine={{ stroke: '#374151', strokeWidth: 2 }}
+                              tickFormatter={(value) => `$${value.toLocaleString()}`}
+                              width={70}
+                            />
                           <Tooltip
                             formatter={(value: any, name: string) => {
                               const formattedValue = `$${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -1117,27 +1133,27 @@ const CalculatorFormImproved = ({ editMode = false }: CalculatorFormImprovedProp
                               backgroundColor: "#ffffff",
                               border: "3px solid #3b82f6",
                               borderRadius: "12px",
-                              padding: "16px 20px",
+                              padding: "12px 16px",
                               boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
-                              fontSize: "16px",
+                              fontSize: "14px",
                               fontWeight: 600
                             }}
-                            labelStyle={{ fontWeight: 'bold', marginBottom: '8px', color: '#1f2937', fontSize: '18px' }}
+                            labelStyle={{ fontWeight: 'bold', marginBottom: '6px', color: '#1f2937', fontSize: '15px' }}
                           />
                           <Legend
                             verticalAlign="top"
                             height={50}
                             iconType="line"
                             wrapperStyle={{
-                              paddingTop: '10px',
-                              paddingBottom: '20px',
-                              fontSize: '16px',
+                              paddingTop: '8px',
+                              paddingBottom: '15px',
+                              fontSize: '13px',
                               fontWeight: 600
                             }}
                             formatter={(value: string) => {
-                              if (value === 'availableFunds') return '💚 Available Funds (Savings + Income)';
-                              if (value === 'expenses') return '❤️ Expenses (What You Need to Pay)';
-                              if (value === 'balance') return '💙 Ending Balance (Money Left Over)';
+                              if (value === 'availableFunds') return '💚 Available Funds';
+                              if (value === 'expenses') return '❤️ Expenses';
+                              if (value === 'balance') return '💙 Balance';
                               return value;
                             }}
                           />
@@ -1154,14 +1170,14 @@ const CalculatorFormImproved = ({ editMode = false }: CalculatorFormImprovedProp
                             type="monotone"
                             dataKey="availableFunds"
                             stroke="#10b981"
-                            strokeWidth={4}
+                            strokeWidth={3}
                             dot={{
                               fill: '#10b981',
-                              r: 6,
+                              r: 5,
                               strokeWidth: 2,
                               stroke: '#ffffff'
                             }}
-                            activeDot={{ r: 10, strokeWidth: 2 }}
+                            activeDot={{ r: 8, strokeWidth: 2 }}
                             name="Available Funds"
                           />
                           {/* Expenses Line (Red) */}
@@ -1169,14 +1185,14 @@ const CalculatorFormImproved = ({ editMode = false }: CalculatorFormImprovedProp
                             type="monotone"
                             dataKey="expenses"
                             stroke="#ef4444"
-                            strokeWidth={4}
+                            strokeWidth={3}
                             dot={{
                               fill: '#ef4444',
-                              r: 6,
+                              r: 5,
                               strokeWidth: 2,
                               stroke: '#ffffff'
                             }}
-                            activeDot={{ r: 10, strokeWidth: 2 }}
+                            activeDot={{ r: 8, strokeWidth: 2 }}
                             name="Expenses"
                           />
                           {/* Ending Balance Line (Blue) */}
@@ -1184,19 +1200,19 @@ const CalculatorFormImproved = ({ editMode = false }: CalculatorFormImprovedProp
                             type="monotone"
                             dataKey="balance"
                             stroke="#3b82f6"
-                            strokeWidth={5}
+                            strokeWidth={4}
                             dot={{
                               fill: '#3b82f6',
-                              r: 8,
-                              strokeWidth: 3,
+                              r: 6,
+                              strokeWidth: 2,
                               stroke: '#ffffff'
                             }}
-                            activeDot={{ r: 12, strokeWidth: 3 }}
+                            activeDot={{ r: 10, strokeWidth: 2 }}
                             label={{
                               position: 'top',
-                              offset: 15,
+                              offset: 12,
                               fill: '#1f2937',
-                              fontSize: 13,
+                              fontSize: 12,
                               fontWeight: 'bold',
                               formatter: (value: number) => `$${value.toLocaleString()}`
                             }}
@@ -1205,25 +1221,177 @@ const CalculatorFormImproved = ({ editMode = false }: CalculatorFormImprovedProp
                         </LineChart>
                       </ResponsiveContainer>
                     </div>
+                  </div>
 
-                    {/* Chart explanation */}
-                    <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-6">
-                      <h5 className="font-bold text-heading text-lg mb-3">📖 How to Read This Chart:</h5>
+                  {/* Enlarged Graph Modal - Only on mobile */}
+                  {isGraphFullscreen && (
+                    <div
+                      className="fixed inset-0 z-[9999] bg-black/80 md:hidden"
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+                      onClick={() => setIsGraphFullscreen(false)}
+                    >
+                      <div className="bg-white rounded-lg p-4 w-full max-w-2xl" onClick={(e) => e.stopPropagation()}>
+                        {/* Close button */}
+                        <div className="flex justify-between items-center mb-3">
+                          <h3 className="text-base font-bold text-heading">Financial Forecast</h3>
+                          <button
+                            onClick={() => setIsGraphFullscreen(false)}
+                            className="p-1.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                            aria-label="Close"
+                          >
+                            <Minimize2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                        {/* Enlarged chart */}
+                        <div className="w-full h-[500px]">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart
+                              data={semesterData.map((s) => ({
+                                semester: s.semesterLabel,
+                                availableFunds: s.availableFunds,
+                                expenses: s.costs,
+                                balance: s.balance,
+                              }))}
+                              margin={{ top: 20, right: 20, left: 10, bottom: 70 }}
+                            >
+                              <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                              <XAxis
+                                dataKey="semester"
+                                label={{ value: 'Semester', position: 'insideBottom', offset: -20, style: { fontSize: 14, fontWeight: 'bold', fill: '#374151' } }}
+                                tick={{ fill: '#374151', fontSize: 11, fontWeight: 600 }}
+                                axisLine={{ stroke: '#374151', strokeWidth: 2 }}
+                                tickLine={{ stroke: '#374151', strokeWidth: 2 }}
+                                angle={-45}
+                                textAnchor="end"
+                                height={85}
+                              />
+                              <YAxis
+                                label={{ value: 'Money ($)', angle: -90, position: 'insideLeft', offset: -5, style: { fontSize: 14, fontWeight: 'bold', fill: '#374151' } }}
+                                tick={{ fill: '#374151', fontSize: 11, fontWeight: 600 }}
+                                axisLine={{ stroke: '#374151', strokeWidth: 2 }}
+                                tickLine={{ stroke: '#374151', strokeWidth: 2 }}
+                                tickFormatter={(value) => `$${value.toLocaleString()}`}
+                                width={70}
+                              />
+                              <Tooltip
+                                formatter={(value: any, name: string) => {
+                                  const formattedValue = `$${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                                  let label = name;
+                                  if (name === 'availableFunds') label = 'Available Funds';
+                                  if (name === 'expenses') label = 'Expenses';
+                                  if (name === 'balance') label = 'Ending Balance';
+                                  return [formattedValue, label];
+                                }}
+                                contentStyle={{
+                                  backgroundColor: "#ffffff",
+                                  border: "3px solid #3b82f6",
+                                  borderRadius: "12px",
+                                  padding: "12px 16px",
+                                  boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
+                                  fontSize: "14px",
+                                  fontWeight: 600
+                                }}
+                                labelStyle={{ fontWeight: 'bold', marginBottom: '6px', color: '#1f2937', fontSize: '15px' }}
+                              />
+                              <Legend
+                                verticalAlign="top"
+                                height={50}
+                                iconType="line"
+                                wrapperStyle={{
+                                  paddingTop: '8px',
+                                  paddingBottom: '15px',
+                                  fontSize: '13px',
+                                  fontWeight: 600
+                                }}
+                                formatter={(value: string) => {
+                                  if (value === 'availableFunds') return '💚 Available Funds';
+                                  if (value === 'expenses') return '❤️ Expenses';
+                                  if (value === 'balance') return '💙 Balance';
+                                  return value;
+                                }}
+                              />
+                              <Line
+                                y={0}
+                                stroke="#000000"
+                                strokeWidth={2}
+                                strokeDasharray="5 5"
+                                dot={false}
+                              />
+                              <Line
+                                type="monotone"
+                                dataKey="availableFunds"
+                                stroke="#10b981"
+                                strokeWidth={3}
+                                dot={{
+                                  fill: '#10b981',
+                                  r: 5,
+                                  strokeWidth: 2,
+                                  stroke: '#ffffff'
+                                }}
+                                activeDot={{ r: 8, strokeWidth: 2 }}
+                                name="Available Funds"
+                              />
+                              <Line
+                                type="monotone"
+                                dataKey="expenses"
+                                stroke="#ef4444"
+                                strokeWidth={3}
+                                dot={{
+                                  fill: '#ef4444',
+                                  r: 5,
+                                  strokeWidth: 2,
+                                  stroke: '#ffffff'
+                                }}
+                                activeDot={{ r: 8, strokeWidth: 2 }}
+                                name="Expenses"
+                              />
+                              <Line
+                                type="monotone"
+                                dataKey="balance"
+                                stroke="#3b82f6"
+                                strokeWidth={4}
+                                dot={{
+                                  fill: '#3b82f6',
+                                  r: 6,
+                                  strokeWidth: 2,
+                                  stroke: '#ffffff'
+                                }}
+                                activeDot={{ r: 10, strokeWidth: 2 }}
+                                label={{
+                                  position: 'top',
+                                  offset: 12,
+                                  fill: '#1f2937',
+                                  fontSize: 12,
+                                  fontWeight: 'bold',
+                                  formatter: (value: number) => `$${value.toLocaleString()}`
+                                }}
+                                name="Ending Balance"
+                              />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Chart explanation */}
+                  <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-6">
+                      <h5 className="font-bold text-heading text-lg mb-3">How to Read This Chart:</h5>
                       <ul className="text-base text-body space-y-3">
-                        <li className="flex items-start">
-                          <span className="mr-2">💚</span>
+                        <li className="flex items-start gap-2">
+                          <div className="w-4 h-4 rounded-full bg-green-600 mt-0.5 flex-shrink-0"></div>
                           <span><span className="font-bold text-green-600">Green</span> = Total money available at semester start</span>
                         </li>
-                        <li className="flex items-start">
-                          <span className="mr-2">❤️</span>
+                        <li className="flex items-start gap-2">
+                          <div className="w-4 h-4 rounded-full bg-red-600 mt-0.5 flex-shrink-0"></div>
                           <span><span className="font-bold text-red-600">Red</span> = Expenses for that semester</span>
                         </li>
-                        <li className="flex items-start">
-                          <span className="mr-2">💙</span>
+                        <li className="flex items-start gap-2">
+                          <div className="w-4 h-4 rounded-full bg-blue-600 mt-0.5 flex-shrink-0"></div>
                           <span><span className="font-bold text-blue-600">Blue</span> = Money left after expenses (below $0 = need loans)</span>
                         </li>
-                        <li className="flex items-start">
-                          <span className="mr-2">📊</span>
+                        <li className="flex items-start gap-2">
+                          <div className="w-4 h-4 rounded-full border-2 border-gray-400 mt-0.5 flex-shrink-0"></div>
                           <span>Hover over any point for exact amounts</span>
                         </li>
                       </ul>
@@ -1243,7 +1411,7 @@ const CalculatorFormImproved = ({ editMode = false }: CalculatorFormImprovedProp
                       {/* Tuition Due Periods */}
                       <div className="border-2 border-purple-200 bg-purple-50 rounded-lg p-4">
                         <h5 className="font-semibold text-heading flex items-center gap-2 mb-3">
-                          <span className="text-purple-600">🎓</span>
+                          <GraduationCap className="w-5 h-5" style={{ color: '#EF3D38' }} />
                           Tuition Payment Periods
                         </h5>
                         <ul className="text-sm text-body space-y-2">
@@ -1275,7 +1443,7 @@ const CalculatorFormImproved = ({ editMode = false }: CalculatorFormImprovedProp
                       {/* High Income Periods */}
                       <div className="border-2 border-green-200 bg-green-50 rounded-lg p-4">
                         <h5 className="font-semibold text-heading flex items-center gap-2 mb-3">
-                          <span className="text-green-600">💰</span>
+                          <DollarSign className="w-5 h-5" style={{ color: '#EF3D38' }} />
                           When You'll Earn More
                         </h5>
                         <div className="text-sm text-body space-y-3">
@@ -1440,16 +1608,20 @@ const CalculatorFormImproved = ({ editMode = false }: CalculatorFormImprovedProp
                       type="button"
                       variant="next"
                       size="lg"
-                      className="px-6"
+                      className="px-4 md:px-6"
                       onClick={handleDownloadReport}
                       aria-label="Download financial report as CSV"
                     >
-                      <Download className="w-5 h-5 mr-2" />
-                      <span>Download Report (CSV)</span>
+                      <Download className="w-4 h-4 md:w-5 md:h-5 mr-2" />
+                      <span className="text-sm md:text-base leading-tight">
+                        Download Report
+                        <br className="md:hidden" />
+                        {" "}(CSV)
+                      </span>
                     </Button>
                   </div>
                 </div>
-              </>
+              </div>
             )}
           </div>
 

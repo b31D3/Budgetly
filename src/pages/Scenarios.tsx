@@ -307,7 +307,7 @@ const Scenarios = () => {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <div className="container mx-auto px-12 py-6">
+        <div className="container mx-auto px-4 md:px-8 lg:px-12 py-6">
           <p>Loading scenarios...</p>
         </div>
       </div>
@@ -371,7 +371,7 @@ const Scenarios = () => {
         </div>
       </div>
 
-      <div className="container mx-auto px-12 py-6">
+      <div className="container mx-auto px-4 md:px-8 lg:px-12 py-6">
         {/* Header */}
         <div className="flex items-start justify-between mb-6">
           <div>

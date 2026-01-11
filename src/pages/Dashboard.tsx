@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { getUserCalculations, type CalculationData } from "@/services/calculatorService";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { AlertTriangle, Sliders, X } from "lucide-react";
+import { AlertTriangle, Sliders, X, Pencil, Trash2 } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -52,6 +52,7 @@ const Dashboard = () => {
     }
   }, [searchParams]);
   const [showAddTransaction, setShowAddTransaction] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<string | null>(null);
   const [transactionType, setTransactionType] = useState("expense");
   const [transactionName, setTransactionName] = useState("");
   const [transactionCategory, setTransactionCategory] = useState("");
@@ -131,25 +132,63 @@ const Dashboard = () => {
     })
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  // Add transaction handler
+  // Edit transaction handler
+  const handleEditTransaction = (transaction: typeof transactions[0]) => {
+    setEditingTransaction(transaction.id);
+    setTransactionName(transaction.name);
+    setTransactionCategory(transaction.category);
+    setTransactionAmount(transaction.amount.toString());
+    setTransactionDate(transaction.date);
+    setTransactionType(transaction.type);
+    setShowAddTransaction(true);
+  };
+
+  // Delete transaction handler
+  const handleDeleteTransaction = (id: string) => {
+    setTransactions(transactions.filter((t) => t.id !== id));
+    toast.success("Transaction deleted successfully!");
+  };
+
+  // Add/Update transaction handler
   const handleAddTransaction = () => {
     if (!transactionName || !transactionCategory || !transactionAmount || !transactionDate) {
       toast.error("Please fill in all fields");
       return;
     }
 
-    const newTransaction = {
-      id: Date.now().toString(),
-      name: transactionName,
-      category: transactionCategory,
-      amount: parseFloat(transactionAmount),
-      date: transactionDate,
-      type: transactionType as "income" | "expense",
-    };
+    if (editingTransaction) {
+      // Update existing transaction
+      setTransactions(
+        transactions.map((t) =>
+          t.id === editingTransaction
+            ? {
+                ...t,
+                name: transactionName,
+                category: transactionCategory,
+                amount: parseFloat(transactionAmount),
+                date: transactionDate,
+                type: transactionType as "income" | "expense",
+              }
+            : t
+        )
+      );
+      toast.success("Transaction updated successfully!");
+    } else {
+      // Add new transaction
+      const newTransaction = {
+        id: Date.now().toString(),
+        name: transactionName,
+        category: transactionCategory,
+        amount: parseFloat(transactionAmount),
+        date: transactionDate,
+        type: transactionType as "income" | "expense",
+      };
+      setTransactions([...transactions, newTransaction]);
+      toast.success("Transaction added successfully!");
+    }
 
-    setTransactions([...transactions, newTransaction]);
-    toast.success("Transaction added successfully!");
     setShowAddTransaction(false);
+    setEditingTransaction(null);
 
     // Reset form
     setTransactionName("");
@@ -161,14 +200,22 @@ const Dashboard = () => {
 
   // Format date for display
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+    // Parse the date string as local time (not UTC)
+    const [year, month, day] = dateString.split('-').map(Number);
+    const date = new Date(year, month - 1, day); // month is 0-indexed
+
     const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time to midnight for accurate comparison
+
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
-    if (date.toDateString() === today.toDateString()) {
+    const dateOnly = new Date(date);
+    dateOnly.setHours(0, 0, 0, 0);
+
+    if (dateOnly.getTime() === today.getTime()) {
       return "Today";
-    } else if (date.toDateString() === yesterday.toDateString()) {
+    } else if (dateOnly.getTime() === yesterday.getTime()) {
       return "Yesterday";
     } else {
       return date.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
@@ -318,8 +365,8 @@ const Dashboard = () => {
 
       {/* Tab Navigation */}
       <div className="border-b border-border">
-        <div className="container mx-auto">
-          <div className="flex gap-8 justify-center">
+        <div className="container mx-auto px-4 overflow-x-auto">
+          <div className="flex gap-4 md:gap-8 justify-center min-w-max md:min-w-0">
             <button
               onClick={() => setActiveTab("dashboard")}
               className={`flex items-center gap-2 px-4 py-4 border-b-2 transition-colors ${
@@ -378,7 +425,7 @@ const Dashboard = () => {
 
       {/* Dashboard Content */}
       {activeTab === "dashboard" && (
-        <div className="container mx-auto px-12 py-6">
+        <div className="container mx-auto px-4 md:px-8 lg:px-12 py-6">
           {/* Welcome Header */}
           <div className="mb-6">
             <h1 className="text-3xl font-bold mb-1">Welcome back!</h1>
@@ -793,7 +840,7 @@ const Dashboard = () => {
 
       {/* Other tabs content */}
       {activeTab === "finances" && (
-        <div className="container mx-auto px-12 py-6">
+        <div className="container mx-auto px-4 md:px-8 lg:px-12 py-6">
           {/* Header */}
           <div className="mb-4 flex items-center justify-between">
             <div>
@@ -988,21 +1035,57 @@ const Dashboard = () => {
                   {filteredTransactions.length > 0 ? (
                     <div className="space-y-2 max-h-[400px] overflow-y-auto">
                       {filteredTransactions.map((transaction) => (
-                        <div key={transaction.id} className="bg-white rounded-lg p-3 flex items-center justify-between shadow-sm">
-                          <div>
-                            <p className="font-semibold text-foreground">{transaction.name}</p>
-                            <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded">
-                              {formatDate(transaction.date)}
-                            </span>
+                        <div key={transaction.id} className="bg-white rounded-lg p-3 flex flex-col md:flex-row md:items-center justify-between shadow-sm gap-2">
+                          <div className="flex items-start justify-between md:block">
+                            <div>
+                              <p className="font-semibold text-foreground">{transaction.name}</p>
+                              <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded">
+                                {formatDate(transaction.date)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1 md:hidden">
+                              <button
+                                onClick={() => handleEditTransaction(transaction)}
+                                className="p-1.5 hover:bg-gray-100 rounded transition-colors"
+                                title="Edit transaction"
+                              >
+                                <Pencil className="w-4 h-4 text-gray-600" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteTransaction(transaction.id)}
+                                className="p-1.5 hover:bg-red-100 rounded transition-colors"
+                                title="Delete transaction"
+                              >
+                                <Trash2 className="w-4 h-4 text-red-600" />
+                              </button>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-4">
+                          <div className="flex items-center justify-between md:gap-3">
                             <div className="flex items-center gap-2 text-muted-foreground">
                               {getCategoryIcon(transaction.category)}
                               <span className="text-sm capitalize">{transaction.category}</span>
                             </div>
-                            <p className={`font-bold ${transaction.type === "income" ? "text-green-600" : "text-red-600"}`}>
-                              $ {transaction.type === "income" ? "+" : "-"}{transaction.amount.toFixed(2)}
-                            </p>
+                            <div className="flex items-center gap-2">
+                              <p className={`font-bold ${transaction.type === "income" ? "text-green-600" : "text-red-600"}`}>
+                                $ {transaction.type === "income" ? "+" : "-"}{transaction.amount.toFixed(2)}
+                              </p>
+                              <div className="hidden md:flex items-center gap-1">
+                                <button
+                                  onClick={() => handleEditTransaction(transaction)}
+                                  className="p-1.5 hover:bg-gray-100 rounded transition-colors"
+                                  title="Edit transaction"
+                                >
+                                  <Pencil className="w-4 h-4 text-gray-600" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteTransaction(transaction.id)}
+                                  className="p-1.5 hover:bg-red-100 rounded transition-colors"
+                                  title="Delete transaction"
+                                >
+                                  <Trash2 className="w-4 h-4 text-red-600" />
+                                </button>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -1020,13 +1103,29 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Add Transaction Modal */}
-      <Dialog open={showAddTransaction} onOpenChange={setShowAddTransaction}>
+      {/* Add/Edit Transaction Modal */}
+      <Dialog
+        open={showAddTransaction}
+        onOpenChange={(open) => {
+          setShowAddTransaction(open);
+          if (!open) {
+            setEditingTransaction(null);
+            setTransactionName("");
+            setTransactionCategory("");
+            setTransactionAmount("");
+            setTransactionDate("");
+            setTransactionType("expense");
+          }
+        }}
+      >
         <DialogContent className="max-w-xl p-8">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-3xl font-bold">Add a transaction</h2>
+            <h2 className="text-3xl font-bold">{editingTransaction ? "Edit" : "Add"} a transaction</h2>
             <button
-              onClick={() => setShowAddTransaction(false)}
+              onClick={() => {
+                setShowAddTransaction(false);
+                setEditingTransaction(null);
+              }}
               className="text-muted-foreground hover:text-foreground transition-colors"
             >
               <X className="w-6 h-6" />
@@ -1125,12 +1224,12 @@ const Dashboard = () => {
               />
             </div>
 
-            {/* Add Button */}
+            {/* Add/Update Button */}
             <Button
               onClick={handleAddTransaction}
               className="w-full h-12 bg-red-500 hover:bg-red-600 text-white text-base rounded-full mt-4"
             >
-              + Add
+              {editingTransaction ? "Update" : "+ Add"}
             </Button>
           </div>
         </DialogContent>

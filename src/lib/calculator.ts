@@ -241,16 +241,37 @@ export const calculateSemesterBreakdown = (
 
   // STEP 6: Build semester-by-semester projection with rolling savings balance
   const semesters: SemesterData[] = [];
-  const currentYear = new Date().getFullYear();
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth(); // 0 = January, 11 = December
 
   // Track running savings balance (starts with initial savings)
   let savingsBalance = totalSavings;
 
   // SEMESTER SEQUENCE: Winter → Summer → Fall → Winter → Summer → Fall...
   // Timeline example (6 semesters):
-  // Winter 2027 → Summer 2027 → Fall 2027 → Winter 2028 → Summer 2028 → Fall 2028
+  // Winter 2026 → Summer 2026 → Fall 2026 → Winter 2027 → Summer 2027 → Fall 2027
 
   let academicSemesterCount = 0;
+
+  // Determine the starting semester based on current month
+  // Winter: Jan-Apr (months 0-3), Summer: May-Aug (months 4-7), Fall: Sep-Dec (months 8-11)
+  let startingPosition = 0; // Default to Winter
+  let startingYearOffset = 0;
+
+  if (currentMonth >= 0 && currentMonth <= 3) {
+    // January to April - Winter semester
+    startingPosition = 0; // Winter
+    startingYearOffset = 0;
+  } else if (currentMonth >= 4 && currentMonth <= 7) {
+    // May to August - Summer period
+    startingPosition = 1; // Summer
+    startingYearOffset = 0;
+  } else {
+    // September to December - Fall semester
+    startingPosition = 2; // Fall
+    startingYearOffset = 0;
+  }
 
   // Calculate total periods including summers
   // Pattern: Winter, Summer, Fall, Winter, Summer, Fall...
@@ -261,7 +282,7 @@ export const calculateSemesterBreakdown = (
   for (let periodIndex = 0; periodIndex < totalPeriodsToShow; periodIndex++) {
     // Determine semester type based on position
     // Pattern: Winter (0), Summer (1), Fall (2), Winter (3), Summer (4), Fall (5)...
-    const positionInYear = periodIndex % 3;
+    const positionInYear = (startingPosition + periodIndex) % 3;
     const isWinterSemester = positionInYear === 0;
     const isSummerPeriod = positionInYear === 1;
     const isFallSemester = positionInYear === 2;
@@ -272,12 +293,12 @@ export const calculateSemesterBreakdown = (
     }
 
     let semesterLabel = "";
-    const yearOffset = Math.floor(periodIndex / 3);
+    const yearOffset = Math.floor((startingPosition + periodIndex) / 3) + startingYearOffset;
     const year = currentYear + yearOffset;
 
     if (isWinterSemester) {
       academicSemesterCount++;
-      semesterLabel = `Winter ${year + 1}`; // Winter crosses into next calendar year
+      semesterLabel = `Winter ${year}`;
     } else if (isSummerPeriod) {
       semesterLabel = `Summer ${year}`;
     } else if (isFallSemester) {
