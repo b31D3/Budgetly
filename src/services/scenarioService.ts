@@ -1,5 +1,5 @@
 import { db } from "@/lib/firebase";
-import { collection, addDoc, getDocs, deleteDoc, doc, query, where, Timestamp, updateDoc } from "firebase/firestore";
+import { collection, addDoc, getDocs, deleteDoc, doc, query, where, Timestamp, updateDoc, deleteField } from "firebase/firestore";
 
 export interface ScenarioData {
   id?: string;
@@ -79,7 +79,21 @@ export const getUserScenarios = async (userId: string): Promise<ScenarioData[]> 
 export const updateScenario = async (scenarioId: string, data: Partial<ScenarioData>): Promise<void> => {
   try {
     const scenarioRef = doc(db, COLLECTION_NAME, scenarioId);
-    await updateDoc(scenarioRef, data);
+
+    // Clean data to remove undefined values (Firestore doesn't accept undefined)
+    const cleanData: any = {};
+
+    Object.keys(data).forEach((key) => {
+      const value = (data as any)[key];
+      if (value !== undefined) {
+        cleanData[key] = value;
+      } else {
+        // If value is undefined, we need to delete the field from Firestore
+        cleanData[key] = deleteField();
+      }
+    });
+
+    await updateDoc(scenarioRef, cleanData);
   } catch (error) {
     console.error("Error updating scenario:", error);
     throw error;

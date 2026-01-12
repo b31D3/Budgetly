@@ -1642,10 +1642,10 @@ const CalculatorFormImproved = ({ editMode = false }: CalculatorFormImprovedProp
                 <div className="space-y-6">
                   {scenarioUsed ? (
                     /* User has already used their free scenario */
-                    <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-6">
-                      <div className="flex items-start gap-4">
+                    <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-4 md:p-6">
+                      <div className="flex flex-col sm:flex-row items-start gap-4">
                         <Lock className="w-6 h-6 text-amber-600 flex-shrink-0 mt-1" />
-                        <div className="flex-1">
+                        <div className="flex-1 w-full">
                           <h4 className="font-semibold text-heading mb-2">You've used your free scenario simulation</h4>
                           <p className="text-sm text-body mb-4">
                             Sign in to unlock unlimited scenario simulations and compare multiple financial forecasts side-by-side.
@@ -1653,7 +1653,7 @@ const CalculatorFormImproved = ({ editMode = false }: CalculatorFormImprovedProp
                           <Button
                             variant="default"
                             size="lg"
-                            className="font-semibold"
+                            className="font-semibold w-full sm:w-auto whitespace-normal sm:whitespace-nowrap"
                             onClick={() => navigate("/signin")}
                           >
                             Sign In to Unlock Unlimited Scenarios
