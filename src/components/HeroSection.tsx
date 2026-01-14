@@ -14,7 +14,7 @@ const HeroSection = () => {
       <div className="container mx-auto px-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 lg:gap-12 items-center">
           {/* Left side - Text content */}
-          <div className="space-y-8 animate-fade-in ml-6">
+          <div className="space-y-8 animate-fade-in ml-6 order-first">
             {/* Main headline */}
             <h1 className="text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight text-[#333333]">
               Know what your degree cost you before you graduate
@@ -48,10 +48,10 @@ const HeroSection = () => {
           </div>
 
           {/* Right side - Illustration */}
-          <div className="w-full flex items-center justify-end overflow-hidden animate-fade-in order-first md:order-last" style={{
+          <div className="w-full flex items-center justify-end overflow-hidden animate-fade-in order-last" style={{
           animationDelay: "0.2s"
         }}>
-            <img src={heroIllustration} alt="Budgetly financial planning journey - from inputs to graduation" className="w-full h-auto max-w-lg lg:max-w-xl translate-x-3" />
+            <img src={heroIllustration} alt="Budgetly financial planning journey - from inputs to graduation" className="w-full h-auto max-w-lg lg:max-w-xl translate-x-2" />
           </div>
         </div>
       </div>

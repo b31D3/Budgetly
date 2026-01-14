@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ChevronRight, ChevronDown, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -18,6 +18,7 @@ import {
 } from "recharts";
 
 const CalculatorForm = () => {
+  const calculatorTitleRef = useRef<HTMLHeadingElement>(null);
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [studentType, setStudentType] = useState<string>("domestic");
   const [semestersLeft, setSemestersLeft] = useState<string>("");
@@ -68,6 +69,11 @@ const CalculatorForm = () => {
       setCurrentStep(4);
     }
   };
+
+  // Scroll to calculator title when step changes
+  useEffect(() => {
+    calculatorTitleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [currentStep]);
 
   // Calculate financial data for each semester
   const calculateSemesterBreakdown = () => {
@@ -142,19 +148,38 @@ const CalculatorForm = () => {
     <section id="calculator" className="w-full bg-background py-16 lg:py-24">
       <div className="container mx-auto px-6">
         {/* Section title */}
-        <h2 className="text-3xl lg:text-4xl font-bold text-center text-heading mb-12 animate-fade-in">
+        <h2 ref={calculatorTitleRef} id="calculator-title" className="text-3xl lg:text-4xl font-bold text-center text-heading mb-12 animate-fade-in">
           Calculate your cash flow
         </h2>
 
         {/* Form card */}
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-3xl mx-auto" id="form-card">
           <div className="bg-form rounded-3xl p-8 lg:p-10 shadow-sm animate-slide-up">
-            {/* Progress dots */}
-            <div className="flex justify-center gap-2 mb-8">
-              <div className={`progress-dot ${currentStep >= 1 ? 'progress-dot-active' : 'progress-dot-inactive'}`} />
-              <div className={`progress-dot ${currentStep >= 2 ? 'progress-dot-active' : 'progress-dot-inactive'}`} />
-              <div className={`progress-dot ${currentStep >= 3 ? 'progress-dot-active' : 'progress-dot-inactive'}`} />
-              <div className={`progress-dot ${currentStep >= 4 ? 'progress-dot-active' : 'progress-dot-inactive'}`} />
+            {/* Progress dots with titles */}
+            <div className="flex justify-center gap-8 mb-12">
+              {/* Step 1: Details */}
+              <div className="flex flex-col items-center gap-2">
+                <span className="text-sm font-medium text-heading">Details</span>
+                <div className={`progress-dot ${currentStep >= 1 ? 'progress-dot-active' : 'progress-dot-inactive'}`} />
+              </div>
+              
+              {/* Step 2: Expenses */}
+              <div className="flex flex-col items-center gap-2">
+                <span className="text-sm font-medium text-heading">Expenses</span>
+                <div className={`progress-dot ${currentStep >= 2 ? 'progress-dot-active' : 'progress-dot-inactive'}`} />
+              </div>
+              
+              {/* Step 3: Income */}
+              <div className="flex flex-col items-center gap-2">
+                <span className="text-sm font-medium text-heading">Income</span>
+                <div className={`progress-dot ${currentStep >= 3 ? 'progress-dot-active' : 'progress-dot-inactive'}`} />
+              </div>
+              
+              {/* Step 4: Cash-flow result */}
+              <div className="flex flex-col items-center gap-2">
+                <span className="text-sm font-medium text-heading">Cash-flow result</span>
+                <div className={`progress-dot ${currentStep >= 4 ? 'progress-dot-active' : 'progress-dot-inactive'}`} />
+              </div>
             </div>
 
             {/* Step 1: School Details */}

@@ -1,0 +1,103 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================================
+    // HELPER FUNCTIONS
+    // ============================================================
+
+    // Check if user is admin (via custom claims set server-side)
+    function isAdmin() {
+      return request.auth != null &&
+             request.auth.token.admin == true;
+    }
+
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Check if user owns the resource
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Check if the data being written has valid userId
+    function hasValidUserId() {
+      return isAuthenticated() &&
+             request.resource.data.userId == request.auth.uid;
+    }
+
+    // ============================================================
+    // USERS COLLECTION
+    // ============================================================
+    match /users/{userId} {
+      // Users can read their own data, admins can read all
+      allow read: if isOwner(userId) || isAdmin();
+
+      // Users can only update/delete their own data
+      allow update, delete: if isOwner(userId);
+
+      // Anyone authenticated can create their user document
+      allow create: if isAuthenticated() &&
+                      request.resource.data.keys().hasAll(['email', 'displayName']) &&
+                      request.auth.uid == userId;
+    }
+
+    // ============================================================
+    // FEEDBACK COLLECTION
+    // ============================================================
+    match /feedback/{feedbackId} {
+      // Anyone can create feedback (even unauthenticated)
+      allow create: if request.resource.data.keys().hasAll(['message', 'timestamp']) &&
+                      request.resource.data.message is string &&
+                      request.resource.data.message.size() <= 5000; // Limit to 5000 chars
+
+      // Only admins can read and delete feedback
+      allow read, delete: if isAdmin();
+
+      // Nobody can update feedback
+      allow update: if false;
+    }
+
+    // ============================================================
+    // CALCULATIONS COLLECTION
+    // ============================================================
+    match /calculations/{calculationId} {
+      // Users can read their own calculations, admins can read all
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+
+      // Users can only create calculations for themselves
+      allow create: if isAuthenticated() &&
+                      hasValidUserId() &&
+                      request.resource.data.keys().hasAll(['userId', 'semestersLeft', 'tuition']);
+
+      // Users can only update/delete their own calculations
+      allow update, delete: if isOwner(resource.data.userId);
+    }
+
+    // ============================================================
+    // SCENARIOS COLLECTION
+    // ============================================================
+    match /scenarios/{scenarioId} {
+      // Users can read their own scenarios, admins can read all
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+
+      // Users can only create scenarios for themselves
+      allow create: if isAuthenticated() &&
+                      hasValidUserId() &&
+                      request.resource.data.keys().hasAll(['userId', 'name', 'monthlyIncomeChange', 'monthlyExpenseChange']);
+
+      // Users can only update/delete their own scenarios
+      allow update, delete: if isOwner(resource.data.userId);
+    }
+
+    // ============================================================
+    // DENY ALL OTHER COLLECTIONS
+    // ============================================================
+    // Explicitly deny access to any other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
