@@ -210,13 +210,13 @@ const Settings = () => {
               Dashboard
             </button>
             <button
-              onClick={() => navigate("/dashboard?tab=finances")}
+              onClick={() => navigate("/my-finances")}
               className="flex items-center gap-2 px-4 py-4 border-b-2 transition-colors border-transparent text-muted-foreground hover:text-foreground"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              My finances
+              Finances
             </button>
             <button
               onClick={() => navigate("/scenarios")}
@@ -226,13 +226,13 @@ const Settings = () => {
               Scenarios
             </button>
             <button
-              onClick={() => navigate("/calculator")}
+              onClick={() => navigate("/edit")}
               className="flex items-center gap-2 px-4 py-4 border-b-2 transition-colors border-transparent text-muted-foreground hover:text-foreground"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
-              Edit inputs
+              Edit
             </button>
             <button
               className="flex items-center gap-2 px-4 py-4 border-b-2 transition-colors border-primary text-primary font-medium"

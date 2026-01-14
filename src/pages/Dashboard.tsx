@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { getUserCalculations, type CalculationData } from "@/services/calculatorService";
 import Navbar from "@/components/Navbar";
@@ -40,17 +40,18 @@ const Dashboard = () => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const [calculations, setCalculations] = useState<CalculationData[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
 
-  // Handle tab parameter from URL
+  // Handle tab parameter from URL or route
   useEffect(() => {
     const tabParam = searchParams.get("tab");
-    if (tabParam === "finances") {
+    if (tabParam === "finances" || location.pathname === "/my-finances") {
       setActiveTab("finances");
     }
-  }, [searchParams]);
+  }, [searchParams, location.pathname]);
   const [showAddTransaction, setShowAddTransaction] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<string | null>(null);
   const [transactionType, setTransactionType] = useState("expense");
@@ -381,7 +382,7 @@ const Dashboard = () => {
               <span className="hidden sm:inline">Dashboard</span>
             </button>
             <button
-              onClick={() => setActiveTab("finances")}
+              onClick={() => navigate("/my-finances")}
               className={`flex items-center gap-1 md:gap-2 px-2 md:px-4 py-4 border-b-2 transition-colors whitespace-nowrap text-sm md:text-base ${
                 activeTab === "finances"
                   ? "border-primary text-primary font-medium"
@@ -391,7 +392,7 @@ const Dashboard = () => {
               <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span className="hidden sm:inline">My finances</span>
+              <span className="hidden sm:inline">Finances</span>
             </button>
             <button
               onClick={() => navigate("/scenarios")}
@@ -401,13 +402,13 @@ const Dashboard = () => {
               <span className="hidden sm:inline">Scenarios</span>
             </button>
             <button
-              onClick={() => navigate("/calculator")}
+              onClick={() => navigate("/edit")}
               className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-4 border-b-2 transition-colors border-transparent text-muted-foreground hover:text-foreground whitespace-nowrap text-sm md:text-base"
             >
               <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
-              <span className="hidden sm:inline">Edit inputs</span>
+              <span className="hidden sm:inline">Edit</span>
             </button>
             <button
               onClick={() => navigate("/settings")}
@@ -844,7 +845,7 @@ const Dashboard = () => {
           {/* Header */}
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold mb-1">My finances</h2>
+              <h2 className="text-2xl font-bold mb-1">Finances</h2>
               <p className="text-muted-foreground text-sm">Track your actual expenses and income</p>
             </div>
             <Button
