@@ -351,7 +351,7 @@ const Dashboard = () => {
           <div className="text-center py-12">
             <h2 className="text-2xl font-bold mb-4">Welcome, {currentUser?.displayName?.split(" ")[0] || "User"}!</h2>
             <p className="text-muted-foreground mb-6">You haven't created any calculations yet.</p>
-            <Button onClick={() => navigate("/calculator")} size="lg">
+            <Button onClick={() => navigate("/edit")} size="lg">
               Create Your First Calculation
             </Button>
           </div>
@@ -680,7 +680,7 @@ const Dashboard = () => {
 
                       <button
                         className="w-full text-left p-2 hover:bg-gray-50 rounded transition-colors"
-                        onClick={() => navigate("/calculator")}
+                        onClick={() => navigate("/edit")}
                       >
                         <p className="text-sm font-medium">Test Different Scenarios</p>
                         <p className="text-xs text-muted-foreground">See how changes affect your outcome</p>
@@ -688,7 +688,7 @@ const Dashboard = () => {
 
                       <button
                         className="w-full text-left p-2 hover:bg-gray-50 rounded transition-colors"
-                        onClick={() => navigate("/calculator")}
+                        onClick={() => navigate("/edit")}
                       >
                         <p className="text-sm font-medium">Update Your Calculation</p>
                         <p className="text-xs text-muted-foreground">Keep your numbers current</p>
