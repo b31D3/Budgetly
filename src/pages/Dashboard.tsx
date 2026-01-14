@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { getUserCalculations, type CalculationData } from "@/services/calculatorService";
 import Navbar from "@/components/Navbar";
@@ -40,17 +40,18 @@ const Dashboard = () => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const [calculations, setCalculations] = useState<CalculationData[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
 
-  // Handle tab parameter from URL
+  // Handle tab parameter from URL or route
   useEffect(() => {
     const tabParam = searchParams.get("tab");
-    if (tabParam === "finances") {
+    if (tabParam === "finances" || location.pathname === "/my-finances") {
       setActiveTab("finances");
     }
-  }, [searchParams]);
+  }, [searchParams, location.pathname]);
   const [showAddTransaction, setShowAddTransaction] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<string | null>(null);
   const [transactionType, setTransactionType] = useState("expense");
@@ -366,58 +367,58 @@ const Dashboard = () => {
       {/* Tab Navigation */}
       <div className="border-b border-border">
         <div className="container mx-auto px-4 overflow-x-auto">
-          <div className="flex gap-4 md:gap-8 justify-center min-w-max md:min-w-0">
+          <div className="flex gap-2 md:gap-8 md:justify-center">
             <button
               onClick={() => setActiveTab("dashboard")}
-              className={`flex items-center gap-2 px-4 py-4 border-b-2 transition-colors ${
+              className={`flex items-center gap-1 md:gap-2 px-2 md:px-4 py-4 border-b-2 transition-colors whitespace-nowrap text-sm md:text-base ${
                 activeTab === "dashboard"
                   ? "border-primary text-primary font-medium"
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
-              Dashboard
+              <span className="hidden sm:inline">Dashboard</span>
             </button>
             <button
-              onClick={() => setActiveTab("finances")}
-              className={`flex items-center gap-2 px-4 py-4 border-b-2 transition-colors ${
+              onClick={() => navigate("/my-finances")}
+              className={`flex items-center gap-1 md:gap-2 px-2 md:px-4 py-4 border-b-2 transition-colors whitespace-nowrap text-sm md:text-base ${
                 activeTab === "finances"
                   ? "border-primary text-primary font-medium"
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              My finances
+              <span className="hidden sm:inline">Finances</span>
             </button>
             <button
               onClick={() => navigate("/scenarios")}
-              className={`flex items-center gap-2 px-4 py-4 border-b-2 transition-colors border-transparent text-muted-foreground hover:text-foreground`}
+              className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-4 border-b-2 transition-colors border-transparent text-muted-foreground hover:text-foreground whitespace-nowrap text-sm md:text-base"
             >
-              <Sliders className="w-5 h-5" />
-              Scenarios
+              <Sliders className="w-4 h-4 md:w-5 md:h-5" />
+              <span className="hidden sm:inline">Scenarios</span>
             </button>
             <button
-              onClick={() => navigate("/calculator")}
-              className={`flex items-center gap-2 px-4 py-4 border-b-2 transition-colors border-transparent text-muted-foreground hover:text-foreground`}
+              onClick={() => navigate("/edit")}
+              className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-4 border-b-2 transition-colors border-transparent text-muted-foreground hover:text-foreground whitespace-nowrap text-sm md:text-base"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
-              Edit inputs
+              <span className="hidden sm:inline">Edit</span>
             </button>
             <button
               onClick={() => navigate("/settings")}
-              className="flex items-center gap-2 px-4 py-4 border-b-2 transition-colors border-transparent text-muted-foreground hover:text-foreground"
+              className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-4 border-b-2 transition-colors border-transparent text-muted-foreground hover:text-foreground whitespace-nowrap text-sm md:text-base"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
-              Settings
+              <span className="hidden sm:inline">Settings</span>
             </button>
           </div>
         </div>
@@ -844,7 +845,7 @@ const Dashboard = () => {
           {/* Header */}
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold mb-1">My finances</h2>
+              <h2 className="text-2xl font-bold mb-1">Finances</h2>
               <p className="text-muted-foreground text-sm">Track your actual expenses and income</p>
             </div>
             <Button
