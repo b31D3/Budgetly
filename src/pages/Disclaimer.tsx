@@ -244,7 +244,7 @@ const Disclaimer = () => {
               </p>
               <div className="mt-4 p-4 bg-accent/30 rounded-lg">
                 <p className="text-muted-foreground">
-                  <strong>Email:</strong> support@budgetly.app<br />
+                  <strong>Email:</strong> support@budgetly.finance<br />
                   <strong>Subject:</strong> Disclaimer Inquiry
                 </p>
               </div>

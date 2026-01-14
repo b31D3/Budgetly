@@ -97,23 +97,33 @@ const Admin = () => {
     totalUsers: 0,
   });
 
-  // Admin access restricted to this email only
-  const ADMIN_EMAIL = "beidemariamshumet@gmail.com";
-
   useEffect(() => {
-    if (!currentUser) {
-      navigate("/signin");
-      return;
-    }
+    const checkAdminAccess = async () => {
+      if (!currentUser) {
+        navigate("/signin");
+        return;
+      }
 
-    // Check if user is admin
-    if (currentUser.email !== ADMIN_EMAIL) {
-      toast.error("Access denied. Admin privileges required.");
-      navigate("/dashboard");
-      return;
-    }
+      try {
+        // Check if user has admin custom claim (set server-side)
+        const idTokenResult = await currentUser.getIdTokenResult();
 
-    loadAdminData();
+        if (!idTokenResult.claims.admin) {
+          toast.error("Access denied. Admin privileges required.");
+          navigate("/dashboard");
+          return;
+        }
+
+        // User is admin, load data
+        loadAdminData();
+      } catch (error) {
+        console.error("Error checking admin access:", error);
+        toast.error("Access denied.");
+        navigate("/dashboard");
+      }
+    };
+
+    checkAdminAccess();
   }, [currentUser, navigate]);
 
   const loadAdminData = async () => {

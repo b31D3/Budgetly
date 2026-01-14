@@ -9,7 +9,7 @@ const PrivacyPolicy = () => {
       <div className="container mx-auto px-6 py-12 flex-grow">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-4xl font-bold mb-4">Privacy Policy</h1>
-          <p className="text-muted-foreground mb-8">Last updated: January 8, 2026</p>
+          <p className="text-muted-foreground mb-8">Last updated: January 13, 2026</p>
 
           <div className="prose prose-slate max-w-none space-y-8">
             <section>
@@ -135,7 +135,7 @@ const PrivacyPolicy = () => {
               </p>
               <div className="mt-4 p-4 bg-accent/30 rounded-lg">
                 <p className="text-muted-foreground">
-                  <strong>Email:</strong> privacy@budgetly.app<br />
+                  <strong>Email:</strong> support@budgetly.finance<br />
                   <strong>Subject:</strong> Privacy Inquiry
                 </p>
               </div>

@@ -37,7 +37,7 @@ The Admin Panel provides a comprehensive dashboard for managing Budgetly users, 
 ### Admin Access
 
 The admin panel is restricted to a single email address for security:
-- **Admin Email:** `beidemariamshumet@gmail.com`
+- **Admin Email:** `your-admin-email@gmail.com`
 
 Only this email address can access the admin panel at `/admin`. Any other user attempting to access the admin panel will be redirected to the dashboard with an "Access denied" message.
 
@@ -48,13 +48,13 @@ To change the admin email:
 1. Open `src/pages/Admin.tsx`
 2. Find the `ADMIN_EMAIL` constant (around line 102):
    ```typescript
-   const ADMIN_EMAIL = "beidemariamshumet@gmail.com";
+   const ADMIN_EMAIL = "your-admin-email@gmail.com";
    ```
 3. Update it to your desired email address
 
 ### Accessing the Admin Panel
 
-1. Sign in with the admin email account: `beidemariamshumet@gmail.com`
+1. Sign in with the admin email account: `your-admin-email@gmail.com`
 2. Navigate to `/admin` or `https://yourdomain.com/admin`
 3. Any other email will be redirected to the dashboard with an error message
 
@@ -115,7 +115,7 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if request.auth != null &&
         (request.auth.uid == userId ||
-         request.auth.token.email == 'beidemariamshumet@gmail.com');
+         request.auth.token.email == 'your-admin-email@gmail.com');
       allow write: if request.auth != null && request.auth.uid == userId;
     }
 
@@ -123,7 +123,7 @@ service cloud.firestore {
     match /feedback/{feedbackId} {
       allow create: if true;
       allow read, delete: if request.auth != null &&
-        request.auth.token.email == 'beidemariamshumet@gmail.com';
+        request.auth.token.email == 'your-admin-email@gmail.com';
     }
 
     // Calculations - users can only access their own
@@ -180,7 +180,7 @@ For better security, you can add a custom claim to admin users using Firebase Ad
 - Check Firebase security rules allow reading the users collection
 
 ### "Access denied" error
-- Verify you're signed in with the admin email: `beidemariamshumet@gmail.com`
+- Verify you're signed in with the admin email: `your-admin-email@gmail.com`
 - Make sure the email in Admin.tsx matches your login email exactly
 - Check browser console for detailed error messages
 
