@@ -3,7 +3,14 @@
     "allow": [
       "Bash(npm run dev:*)",
       "Bash(cat:*)",
-      "Bash(npx prettier:*)"
+      "Bash(npx prettier:*)",
+      "Bash(del \"c:\\\\Users\\\\beide\\\\OneDrive\\\\Desktop\\\\Budgetly\\\\src\\\\pages\\\\VerifyResetCode.tsx\" \"c:\\\\Users\\\\beide\\\\OneDrive\\\\Desktop\\\\Budgetly\\\\src\\\\pages\\\\ResetPassword.tsx\")",
+      "Bash(del \"c:\\\\Users\\\\beide\\\\OneDrive\\\\Desktop\\\\Budgetly\\\\src\\\\pages\\\\VerifyEmailAction.tsx\" \"c:\\\\Users\\\\beide\\\\OneDrive\\\\Desktop\\\\Budgetly\\\\src\\\\pages\\\\ResetPassword.tsx\")",
+      "Bash(cmd /c \"del \\\\?\\\\c:\\\\Users\\\\beide\\\\OneDrive\\\\Desktop\\\\Budgetly\\\\nul\")",
+      "Bash(powershell:*)",
+      "Bash(cmd /c \"dir nul\")",
+      "Bash(cmd /c \"ren nul nul_delete.txt && del nul_delete.txt\")",
+      "Bash(python -c \"import os; os.remove\\(''nul''\\)\")"
     ]
   }
 }

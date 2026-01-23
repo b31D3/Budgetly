@@ -9,6 +9,9 @@ import MaintenanceMode from "@/components/MaintenanceMode";
 import Index from "./pages/Index";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
+import VerifyEmail from "./pages/VerifyEmail";
+import ForgotPassword from "./pages/ForgotPassword";
+import AuthAction from "./pages/AuthAction";
 import Dashboard from "./pages/Dashboard";
 import Calculator from "./pages/Calculator";
 import Scenarios from "./pages/Scenarios";
@@ -18,11 +21,12 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfUse from "./pages/TermsOfUse";
 import Disclaimer from "./pages/Disclaimer";
 import NotFound from "./pages/NotFound";
+import AnalyticsTracker from "./components/AnalyticsTracker";
 
 const queryClient = new QueryClient();
 
 // Set to true to enable maintenance mode
-const MAINTENANCE_MODE = true;
+const MAINTENANCE_MODE = false;
 
 const App = () => {
   // Check if we're past the launch date
@@ -41,10 +45,14 @@ const App = () => {
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <AnalyticsTracker />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/signin" element={<SignIn />} />
             <Route path="/signup" element={<SignUp />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/auth-action" element={<AuthAction />} />
             <Route path="/calculator" element={<Calculator />} />
             <Route path="/edit" element={<Calculator />} />
             <Route path="/my-finances" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

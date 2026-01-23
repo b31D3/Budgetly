@@ -104,7 +104,7 @@ const Calculator = () => {
       {/* Tab Navigation */}
       <div className="border-b border-border">
         <div className="container mx-auto px-4 overflow-x-auto">
-          <div className="flex gap-2 md:gap-8 md:justify-center">
+          <div className="flex gap-2 md:gap-8 justify-center">
             <button
               onClick={() => navigate("/dashboard")}
               className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-4 border-b-2 transition-colors whitespace-nowrap text-sm md:text-base border-transparent text-muted-foreground hover:text-foreground"
