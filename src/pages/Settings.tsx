@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -16,21 +16,16 @@ import {
 } from "@/components/ui/select-custom";
 import { Sliders, Settings as SettingsIcon } from "lucide-react";
 import { updateProfile, updateEmail } from "firebase/auth";
-import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
-import { storage } from "@/lib/firebase";
 
 const Settings = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Profile states
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [school, setSchool] = useState("");
-  const [profilePictureUrl, setProfilePictureUrl] = useState("");
 
   // Preference states
   const [currency, setCurrency] = useState("CAD");
@@ -41,7 +36,6 @@ const Settings = () => {
     if (currentUser) {
       setFullName(currentUser.displayName || "");
       setEmail(currentUser.email || "");
-      setProfilePictureUrl(currentUser.photoURL || "");
 
       // Load preferences from localStorage
       const savedPreferences = localStorage.getItem("budgetly_preferences");
@@ -54,86 +48,6 @@ const Settings = () => {
       }
     }
   }, [currentUser]);
-
-  const handleUpdatePicture = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !currentUser) return;
-
-    // Validate file type
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please select an image file");
-      return;
-    }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image size should be less than 5MB");
-      return;
-    }
-
-    setUploading(true);
-    try {
-      // Create a reference to the storage location
-      const storageRef = ref(storage, `profile-pictures/${currentUser.uid}/${Date.now()}_${file.name}`);
-
-      // Upload the file
-      await uploadBytes(storageRef, file);
-
-      // Get the download URL
-      const downloadURL = await getDownloadURL(storageRef);
-
-      // Update user profile with new photo URL
-      await updateProfile(currentUser, {
-        photoURL: downloadURL,
-      });
-
-      setProfilePictureUrl(downloadURL);
-      toast.success("Profile picture updated successfully!");
-    } catch (error) {
-      console.error("Error uploading profile picture:", error);
-      toast.error("Failed to upload profile picture");
-    } finally {
-      setUploading(false);
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    }
-  };
-
-  const handleRemovePicture = async () => {
-    if (!currentUser) return;
-
-    setUploading(true);
-    try {
-      // Delete the old photo from storage if it exists
-      if (currentUser.photoURL && currentUser.photoURL.includes("firebase")) {
-        try {
-          const oldPhotoRef = ref(storage, currentUser.photoURL);
-          await deleteObject(oldPhotoRef);
-        } catch (error) {
-          console.log("Old photo deletion skipped:", error);
-        }
-      }
-
-      // Update user profile to remove photo URL
-      await updateProfile(currentUser, {
-        photoURL: "",
-      });
-
-      setProfilePictureUrl("");
-      toast.success("Profile picture removed successfully!");
-    } catch (error) {
-      console.error("Error removing profile picture:", error);
-      toast.error("Failed to remove profile picture");
-    } finally {
-      setUploading(false);
-    }
-  };
 
   const handleSaveProfile = async () => {
     if (!currentUser) return;
@@ -199,7 +113,7 @@ const Settings = () => {
       {/* Tab Navigation */}
       <div className="border-b border-border">
         <div className="container mx-auto px-4 overflow-x-auto">
-          <div className="flex gap-2 md:gap-8 md:justify-center">
+          <div className="flex gap-2 md:gap-8 justify-center">
             <button
               onClick={() => navigate("/dashboard")}
               className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-4 border-b-2 transition-colors whitespace-nowrap text-sm md:text-base border-transparent text-muted-foreground hover:text-foreground"
@@ -258,48 +172,17 @@ const Settings = () => {
             <h2 className="text-2xl font-bold mb-6">Profile</h2>
 
             <div className="space-y-6">
-              {/* Profile Picture */}
-              <div>
-                <Label className="text-base font-semibold mb-3 block">Profile picture</Label>
-                <div className="flex items-center gap-4">
-                  <div className="w-20 h-20 rounded-full bg-gray-300 flex items-center justify-center overflow-hidden">
-                    {profilePictureUrl ? (
-                      <img
-                        src={profilePictureUrl}
-                        alt="Profile"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <svg className="w-12 h-12 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                      </svg>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileChange}
-                      className="hidden"
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleUpdatePicture}
-                      disabled={uploading}
-                    >
-                      {uploading ? "Uploading..." : "Update picture"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleRemovePicture}
-                      disabled={uploading || !profilePictureUrl}
-                    >
-                      Remove
-                    </Button>
-                  </div>
+              {/* Profile Picture Display */}
+              <div className="flex justify-center mb-6">
+                <div className="w-24 h-24 rounded-full bg-gray-300 flex items-center justify-center overflow-hidden">
+                  <img
+                    src={
+                      currentUser?.photoURL ||
+                      `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName || currentUser?.email || 'User')}&size=200&background=ef4444&color=ffffff&bold=true`
+                    }
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
                 </div>
               </div>
 

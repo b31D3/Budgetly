@@ -17,12 +17,13 @@ const HeroSection = () => {
           <div className="space-y-8 animate-fade-in ml-6 order-first">
             {/* Main headline */}
             <h1 className="text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight text-[#333333]">
-              Know what your degree cost you before you graduate
+             Know Your Numbers, Plan Your Semesters
             </h1>
 
             {/* Subtext */}
             <p className="text-lg lg:text-xl text-body leading-relaxed max-w-xl">
-              Stop guessing if you'll make it to graduation. See your exact financial path and how every decision moves you closer to debt-free or deeper in the hole.
+              Calculate exactly how much money you'll need and have for each term ahead.
+Spot shortfalls early and graduate without financial surprises.
             </p>
 
             {/* See the full picture section */}

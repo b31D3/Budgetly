@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import logo from "@/assets/logo.png";
 import { Link } from "react-router-dom";
 import Footer from "@/components/Footer";
+import { auth } from "@/lib/firebase";
+import { sendEmailVerification, signOut } from "firebase/auth";
 
 const SignIn = () => {
   const [email, setEmail] = useState("");
@@ -17,12 +19,47 @@ const SignIn = () => {
   const [loading, setLoading] = useState(false);
   const { signInWithEmail, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
+  useEffect(() => {
+    // Clear the pending verification email from localStorage
+    localStorage.removeItem("pendingVerificationEmail");
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
       await signInWithEmail(email, password);
+
+      // Check if email is verified
+      const user = auth.currentUser;
+      if (user && !user.emailVerified) {
+        // Sign out the user
+        await signOut(auth);
+        toast.error(
+          "Please verify your email before signing in. Check your inbox for the verification link.",
+          {
+            duration: 6000,
+            action: {
+              label: "Resend",
+              onClick: async () => {
+                try {
+                  // Sign back in temporarily to resend email
+                  const result = await signInWithEmail(email, password);
+                  if (auth.currentUser) {
+                    await sendEmailVerification(auth.currentUser);
+                    await signOut(auth);
+                    toast.success("Verification email sent! Check your inbox.");
+                  }
+                } catch (err) {
+                  toast.error("Failed to resend verification email");
+                }
+              },
+            },
+          }
+        );
+        return;
+      }
+
       toast.success("Successfully signed in!");
       navigate("/");
     } catch (error: any) {

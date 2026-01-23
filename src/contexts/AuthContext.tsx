@@ -8,6 +8,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   updateProfile,
+  sendEmailVerification,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
@@ -52,10 +53,24 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   // Sign up with email and password
   const signUpWithEmail = async (email: string, password: string, displayName: string) => {
     try {
+      console.log("Creating user account...");
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      console.log("User account created:", userCredential.user.email);
+
       // Update the user's display name
       if (userCredential.user) {
+        console.log("Updating profile...");
         await updateProfile(userCredential.user, { displayName });
+        console.log("Profile updated");
+
+        // Send verification email with custom redirect URL
+        console.log("Sending verification email to:", userCredential.user.email);
+        const actionCodeSettings = {
+          url: `${window.location.origin}/auth-action`,
+          handleCodeInApp: true,
+        };
+        await sendEmailVerification(userCredential.user, actionCodeSettings);
+        console.log("Verification email sent successfully!");
       }
     } catch (error) {
       console.error("Error signing up with email:", error);

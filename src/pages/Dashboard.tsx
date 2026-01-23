@@ -50,6 +50,8 @@ const Dashboard = () => {
     const tabParam = searchParams.get("tab");
     if (tabParam === "finances" || location.pathname === "/my-finances") {
       setActiveTab("finances");
+    } else {
+      setActiveTab("dashboard");
     }
   }, [searchParams, location.pathname]);
   const [showAddTransaction, setShowAddTransaction] = useState(false);
@@ -367,9 +369,9 @@ const Dashboard = () => {
       {/* Tab Navigation */}
       <div className="border-b border-border">
         <div className="container mx-auto px-4 overflow-x-auto">
-          <div className="flex gap-2 md:gap-8 md:justify-center">
+          <div className="flex gap-2 md:gap-8 justify-center">
             <button
-              onClick={() => setActiveTab("dashboard")}
+              onClick={() => navigate("/dashboard")}
               className={`flex items-center gap-1 md:gap-2 px-2 md:px-4 py-4 border-b-2 transition-colors whitespace-nowrap text-sm md:text-base ${
                 activeTab === "dashboard"
                   ? "border-primary text-primary font-medium"
@@ -396,14 +398,14 @@ const Dashboard = () => {
             </button>
             <button
               onClick={() => navigate("/scenarios")}
-              className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-4 border-b-2 transition-colors border-transparent text-muted-foreground hover:text-foreground whitespace-nowrap text-sm md:text-base"
+              className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-4 border-b-2 transition-colors whitespace-nowrap text-sm md:text-base border-transparent text-muted-foreground hover:text-foreground"
             >
               <Sliders className="w-4 h-4 md:w-5 md:h-5" />
               <span className="hidden sm:inline">Scenarios</span>
             </button>
             <button
               onClick={() => navigate("/edit")}
-              className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-4 border-b-2 transition-colors border-transparent text-muted-foreground hover:text-foreground whitespace-nowrap text-sm md:text-base"
+              className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-4 border-b-2 transition-colors whitespace-nowrap text-sm md:text-base border-transparent text-muted-foreground hover:text-foreground"
             >
               <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -412,7 +414,7 @@ const Dashboard = () => {
             </button>
             <button
               onClick={() => navigate("/settings")}
-              className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-4 border-b-2 transition-colors border-transparent text-muted-foreground hover:text-foreground whitespace-nowrap text-sm md:text-base"
+              className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-4 border-b-2 transition-colors whitespace-nowrap text-sm md:text-base border-transparent text-muted-foreground hover:text-foreground"
             >
               <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -1120,18 +1122,11 @@ const Dashboard = () => {
         }}
       >
         <DialogContent className="max-w-xl p-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-3xl font-bold">{editingTransaction ? "Edit" : "Add"} a transaction</h2>
-            <button
-              onClick={() => {
-                setShowAddTransaction(false);
-                setEditingTransaction(null);
-              }}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <X className="w-6 h-6" />
-            </button>
-          </div>
+          <DialogHeader className="mb-4">
+            <DialogTitle className="text-3xl font-bold">
+              {editingTransaction ? "Edit" : "Add"} a transaction
+            </DialogTitle>
+          </DialogHeader>
 
           <div className="space-y-6">
             {/* Transaction Name */}

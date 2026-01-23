@@ -40,8 +40,14 @@ const SignUp = () => {
     try {
       const displayName = `${firstName} ${lastName}`;
       await signUpWithEmail(email, password, displayName);
-      toast.success("Account created successfully!");
-      navigate("/");
+
+      // Store email for the verification page
+      localStorage.setItem("pendingVerificationEmail", email);
+
+      toast.success("Account created! Please check your email to verify your account.");
+
+      // Redirect to verification page
+      navigate("/verify-email");
     } catch (error: any) {
       toast.error(error.message || "Failed to create account");
     } finally {

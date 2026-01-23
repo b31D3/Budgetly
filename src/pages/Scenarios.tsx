@@ -43,6 +43,44 @@ import {
   ReferenceLine,
 } from "recharts";
 
+// Helper function to get current semester based on date
+const getCurrentSemester = (): { semester: string; year: number } => {
+  const now = new Date();
+  const month = now.getMonth() + 1; // getMonth() returns 0-11
+  const year = now.getFullYear();
+
+  if (month >= 1 && month <= 4) {
+    return { semester: "Winter", year };
+  } else if (month >= 5 && month <= 8) {
+    return { semester: "Summer", year };
+  } else {
+    return { semester: "Fall", year };
+  }
+};
+
+// Helper function to generate semester options starting from current semester
+const generateSemesterOptions = (count: number = 6): string[] => {
+  const { semester: currentSemester, year: currentYear } = getCurrentSemester();
+  const semesters: string[] = [];
+  const semesterOrder = ["Winter", "Summer", "Fall"];
+
+  let semesterIndex = semesterOrder.indexOf(currentSemester);
+  let year = currentYear;
+
+  for (let i = 0; i < count; i++) {
+    semesters.push(`${semesterOrder[semesterIndex]} ${year}`);
+
+    // Move to next semester
+    semesterIndex++;
+    if (semesterIndex >= semesterOrder.length) {
+      semesterIndex = 0;
+      year++;
+    }
+  }
+
+  return semesters;
+};
+
 const Scenarios = () => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
@@ -52,6 +90,9 @@ const Scenarios = () => {
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [selectedScenario, setSelectedScenario] = useState<ScenarioData | null>(null);
   const [latestCalculation, setLatestCalculation] = useState<CalculationData | null>(null);
+
+  // Generate semester options starting from current semester (3 years = 9 semesters)
+  const semesterOptions = generateSemesterOptions(9);
 
   // Form states
   const [scenarioName, setScenarioName] = useState("");
@@ -323,7 +364,7 @@ const Scenarios = () => {
       {/* Tab Navigation */}
       <div className="border-b border-border">
         <div className="container mx-auto px-4 overflow-x-auto">
-          <div className="flex gap-2 md:gap-8 md:justify-center">
+          <div className="flex gap-2 md:gap-8 justify-center">
             <button
               onClick={() => navigate("/dashboard")}
               className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-4 border-b-2 transition-colors whitespace-nowrap text-sm md:text-base border-transparent text-muted-foreground hover:text-foreground"
@@ -571,15 +612,7 @@ const Scenarios = () => {
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-2xl">Create new scenario</DialogTitle>
-              <button
-                onClick={() => setShowCreateDialog(false)}
-                className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+            <DialogTitle className="text-2xl">Create new scenario</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-6 py-4">
@@ -661,12 +694,11 @@ const Scenarios = () => {
                     <SelectValue placeholder="Semester" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Fall 2024">Fall 2024</SelectItem>
-                    <SelectItem value="Spring 2025">Spring 2025</SelectItem>
-                    <SelectItem value="Fall 2025">Fall 2025</SelectItem>
-                    <SelectItem value="Spring 2026">Spring 2026</SelectItem>
-                    <SelectItem value="Fall 2026">Fall 2026</SelectItem>
-                    <SelectItem value="Spring 2027">Spring 2027</SelectItem>
+                    {semesterOptions.map((semester) => (
+                      <SelectItem key={semester} value={semester}>
+                        {semester}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -759,7 +791,7 @@ const Scenarios = () => {
               </div>
 
               {/* Edit Form */}
-              <div className="space-y-4 -mt-12">
+              <div className="space-y-4 mt-6">
                 <h3 className="text-lg font-semibold">Edit scenario</h3>
 
                 {/* Scenario Name */}
@@ -839,12 +871,11 @@ const Scenarios = () => {
                         <SelectValue placeholder="Semester" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Fall 2024">Fall 2024</SelectItem>
-                        <SelectItem value="Spring 2025">Spring 2025</SelectItem>
-                        <SelectItem value="Fall 2025">Fall 2025</SelectItem>
-                        <SelectItem value="Spring 2026">Spring 2026</SelectItem>
-                        <SelectItem value="Fall 2026">Fall 2026</SelectItem>
-                        <SelectItem value="Spring 2027">Spring 2027</SelectItem>
+                        {semesterOptions.map((semester) => (
+                          <SelectItem key={semester} value={semester}>
+                            {semester}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
