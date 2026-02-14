@@ -2,9 +2,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import PageTransition from "@/components/PageTransition";
 import MaintenanceMode from "@/components/MaintenanceMode";
 import Index from "./pages/Index";
 import SignIn from "./pages/SignIn";
@@ -20,6 +22,7 @@ import Admin from "./pages/Admin";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfUse from "./pages/TermsOfUse";
 import Disclaimer from "./pages/Disclaimer";
+import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound";
 import AnalyticsTracker from "./components/AnalyticsTracker";
 
@@ -27,6 +30,75 @@ const queryClient = new QueryClient();
 
 // Set to true to enable maintenance mode
 const MAINTENANCE_MODE = false;
+
+const AnimatedRoutes = () => {
+  const location = useLocation();
+
+  return (
+    <>
+      <AnalyticsTracker />
+      <AnimatePresence mode="wait">
+        <Routes location={location} key={location.pathname}>
+          <Route path="/" element={<PageTransition><Index /></PageTransition>} />
+          <Route path="/signin" element={<PageTransition><SignIn /></PageTransition>} />
+          <Route path="/signup" element={<PageTransition><SignUp /></PageTransition>} />
+          <Route path="/verify-email" element={<PageTransition><VerifyEmail /></PageTransition>} />
+          <Route path="/forgot-password" element={<PageTransition><ForgotPassword /></PageTransition>} />
+          <Route path="/auth-action" element={<PageTransition><AuthAction /></PageTransition>} />
+          <Route path="/onboarding" element={<PageTransition><Onboarding /></PageTransition>} />
+          <Route path="/calculator" element={<PageTransition><Calculator /></PageTransition>} />
+          <Route path="/edit" element={<PageTransition><Calculator /></PageTransition>} />
+          <Route path="/my-finances" element={<PageTransition><ProtectedRoute><Dashboard /></ProtectedRoute></PageTransition>} />
+          <Route
+            path="/dashboard"
+            element={
+              <PageTransition>
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              </PageTransition>
+            }
+          />
+          <Route
+            path="/scenarios"
+            element={
+              <PageTransition>
+                <ProtectedRoute>
+                  <Scenarios />
+                </ProtectedRoute>
+              </PageTransition>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <PageTransition>
+                <ProtectedRoute>
+                  <Settings />
+                </ProtectedRoute>
+              </PageTransition>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <PageTransition>
+                <ProtectedRoute>
+                  <Admin />
+                </ProtectedRoute>
+              </PageTransition>
+            }
+          />
+          <Route path="/privacy-policy" element={<PageTransition><PrivacyPolicy /></PageTransition>} />
+          <Route path="/terms-of-use" element={<PageTransition><TermsOfUse /></PageTransition>} />
+          <Route path="/disclaimer" element={<PageTransition><Disclaimer /></PageTransition>} />
+          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
+        </Routes>
+      </AnimatePresence>
+    </>
+  );
+};
 
 const App = () => {
   // Check if we're past the launch date
@@ -45,55 +117,7 @@ const App = () => {
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <AnalyticsTracker />
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/signin" element={<SignIn />} />
-            <Route path="/signup" element={<SignUp />} />
-            <Route path="/verify-email" element={<VerifyEmail />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/auth-action" element={<AuthAction />} />
-            <Route path="/calculator" element={<Calculator />} />
-            <Route path="/edit" element={<Calculator />} />
-            <Route path="/my-finances" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/scenarios"
-              element={
-                <ProtectedRoute>
-                  <Scenarios />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <ProtectedRoute>
-                  <Settings />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute>
-                  <Admin />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-            <Route path="/terms-of-use" element={<TermsOfUse />} />
-            <Route path="/disclaimer" element={<Disclaimer />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <AnimatedRoutes />
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>

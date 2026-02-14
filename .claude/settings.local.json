@@ -11,7 +11,10 @@
       "Bash(cmd /c \"dir nul\")",
       "Bash(cmd /c \"ren nul nul_delete.txt && del nul_delete.txt\")",
       "Bash(python -c \"import os; os.remove\\(''nul''\\)\")",
-      "Bash(npm run build)"
+      "Bash(npm run build)",
+      "Bash(dir \"c:\\\\Users\\\\beide\\\\OneDrive\\\\Desktop\\\\Budgetly\\\\src\\\\assets\" /B)",
+      "Bash(npm ls:*)",
+      "Bash(npm install:*)"
     ]
   }
 }
