@@ -15,6 +15,7 @@ import {
 } from "@/services/transactionService";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import BottomNav from "@/components/BottomNav";
 import {
   AlertTriangle,
   Sliders,
@@ -202,6 +203,7 @@ const Dashboard = () => {
     }
   }, [searchParams, location.pathname]);
 
+  const [showExpandedChart, setShowExpandedChart] = useState(false);
   const [showAddTransaction, setShowAddTransaction] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<string | null>(
     null
@@ -637,14 +639,15 @@ const Dashboard = () => {
     <div className="min-h-screen bg-gray-50/40 flex flex-col">
       <div className="sticky top-0 z-40">
         <Navbar />
+        <BottomNav />
       </div>
 
       <div className="flex flex-1">
         {/* ──────────────────────────────────
-            LEFT SIDEBAR (desktop only)
+            LEFT SIDEBAR
             ────────────────────────────────── */}
         <aside
-          className={`hidden lg:flex border-r bg-white flex-col items-center py-5 gap-2 flex-shrink-0 sticky top-[64px] h-[calc(100vh-64px)] transition-all duration-200 ${
+          className={`hidden lg:flex border-r bg-white flex-col items-center py-4 gap-2 flex-shrink-0 sticky top-[64px] h-[calc(100vh-64px)] transition-all duration-200 ${
             sidebarExpanded ? "w-48 px-3" : "w-16"
           }`}
         >
@@ -695,38 +698,6 @@ const Dashboard = () => {
             onClick={() => navigate("/settings")}
           />
         </aside>
-
-        {/* ──────────────────────────────────
-            MOBILE TAB BAR
-            ────────────────────────────────── */}
-        <div className="lg:hidden border-b border-border w-full bg-white">
-          <div className="flex gap-1 justify-center overflow-x-auto px-2">
-            {[
-              { key: "dashboard", label: t.nav.dashboard, path: "/dashboard" },
-              { key: "finances", label: t.nav.finances, path: "/my-finances" },
-              { key: "scenarios", label: t.nav.scenarios, path: "/scenarios" },
-              { key: "edit", label: t.nav.edit, path: "/edit" },
-              { key: "settings", label: t.nav.settings, path: "/settings" },
-            ].map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => {
-                  if (tab.key === "dashboard" || tab.key === "finances") {
-                    setActiveTab(tab.key);
-                  }
-                  navigate(tab.path);
-                }}
-                className={`px-3 py-3 text-xs font-medium whitespace-nowrap border-b-2 transition-colors ${
-                  activeTab === tab.key
-                    ? "border-red-500 text-red-500"
-                    : "border-transparent text-muted-foreground"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
 
         {/* ──────────────────────────────────
             MAIN CONTENT
@@ -914,7 +885,7 @@ const Dashboard = () => {
 
                       {/* Legend row */}
                       <div className="flex items-center gap-6 px-4 py-3 border-t mt-2">
-                        <button className="flex items-center gap-1.5 text-xs font-semibold text-red-500 hover:underline">
+                        <button onClick={() => setShowExpandedChart(true)} className="flex items-center gap-1.5 text-xs font-semibold text-red-500 hover:underline">
                           <Maximize2 className="w-3.5 h-3.5" />
                           Expand
                         </button>
@@ -1820,6 +1791,81 @@ const Dashboard = () => {
                 >
                   {editingTransaction ? "Update" : "+ Add"}
                 </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* ════════════════════════════════
+              EXPANDED CHART MODAL
+              ════════════════════════════════ */}
+          <Dialog open={showExpandedChart} onOpenChange={setShowExpandedChart}>
+            <DialogContent className="max-w-5xl w-[95vw] p-6">
+              <DialogHeader className="mb-2">
+                <DialogTitle className="text-xl font-bold">{t.dashboard.financialTimeline}</DialogTitle>
+              </DialogHeader>
+
+              <ResponsiveContainer width="100%" height={500}>
+                <AreaChart
+                  data={timelineData}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                >
+                  <defs>
+                    <linearGradient id="expandSplitFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#22c55e" stopOpacity={0.35} />
+                      <stop offset={`${gradientOffset * 100}%`} stopColor="#22c55e" stopOpacity={0.06} />
+                      <stop offset={`${gradientOffset * 100}%`} stopColor="#ef4444" stopOpacity={0.06} />
+                      <stop offset="100%" stopColor="#ef4444" stopOpacity={0.3} />
+                    </linearGradient>
+                    <linearGradient id="expandSplitStroke" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset={`${gradientOffset * 100}%`} stopColor="#22c55e" />
+                      <stop offset={`${gradientOffset * 100}%`} stopColor="#ef4444" />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fill: "#6b7280", fontSize: 12 }}
+                    axisLine={{ stroke: "#e5e7eb" }}
+                    tickLine={false}
+                    angle={-30}
+                    textAnchor="end"
+                    height={60}
+                  />
+                  <YAxis
+                    tick={{ fill: "#6b7280", fontSize: 12 }}
+                    axisLine={{ stroke: "#e5e7eb" }}
+                    tickLine={false}
+                    tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                  />
+                  <Tooltip content={<CustomChartTooltip />} />
+                  <ReferenceLine
+                    y={0}
+                    stroke="#9ca3af"
+                    strokeDasharray="5 5"
+                    strokeWidth={1.5}
+                    label={{ value: "$0", position: "left", fill: "#9ca3af", fontSize: 12 }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="balance"
+                    stroke="url(#expandSplitStroke)"
+                    strokeWidth={3}
+                    fill="url(#expandSplitFill)"
+                    dot={{ r: 6, fill: "#fff", stroke: "#22c55e", strokeWidth: 2 }}
+                    activeDot={{ r: 8 }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+
+              <div className="flex items-center gap-6 pt-2 border-t mt-2">
+                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <span className="w-3 h-3 rounded-full bg-green-500 inline-block" />
+                  Money Surplus
+                </div>
+                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <span className="w-3 h-3 rounded-full bg-red-500 inline-block" />
+                  Money Deficit
+                </div>
               </div>
             </DialogContent>
           </Dialog>

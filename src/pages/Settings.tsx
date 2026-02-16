@@ -5,6 +5,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { type Language } from "@/lib/translations";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
+import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -143,10 +144,11 @@ const Settings = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
+      <BottomNav />
 
       <div className="flex flex-1">
         {/* ── Left Sidebar ── */}
-        <aside className={`border-r border-border bg-white flex flex-col items-center py-4 gap-2 sticky top-[57px] h-[calc(100vh-57px)] flex-shrink-0 transition-all duration-200 ${sidebarExpanded ? "w-48 px-3" : "w-16"}`}>
+        <aside className={`hidden lg:flex border-r border-border bg-white flex-col items-center py-4 gap-2 sticky top-[57px] h-[calc(100vh-57px)] flex-shrink-0 transition-all duration-200 ${sidebarExpanded ? "w-48 px-3" : "w-16"}`}>
           {/* Expand toggle — top */}
           <button
             onClick={() => setSidebarExpanded(!sidebarExpanded)}
@@ -162,7 +164,7 @@ const Settings = () => {
         </aside>
 
         {/* ── Main content ── */}
-        <main className="flex-1 px-8 py-8 overflow-auto">
+        <main className="flex-1 px-4 md:px-8 py-8 overflow-auto">
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-2xl font-bold mb-1">{t.settings.title}</h1>
