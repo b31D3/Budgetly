@@ -1,10 +1,18 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { getUserCalculations, type CalculationData } from "@/services/calculatorService";
+import {
+  addTransaction,
+  getUserTransactions,
+  updateTransaction,
+  deleteTransaction,
+  type Transaction,
+} from "@/services/transactionService";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import {
@@ -15,7 +23,7 @@ import {
   DollarSign,
   BarChart3,
   Bell,
-  Heart,
+  Activity,
   Clock,
   ListChecks,
   Maximize2,
@@ -25,6 +33,7 @@ import {
   ChevronLeft,
   LayoutDashboard,
   Settings,
+  CheckCircle2,
 } from "lucide-react";
 import {
   AreaChart,
@@ -175,6 +184,7 @@ const getDateRange = (label: string) => {
    ═══════════════════════════════════════════════ */
 const Dashboard = () => {
   const { currentUser } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const location = useLocation();
@@ -204,34 +214,29 @@ const Dashboard = () => {
   const [transactionFilter, setTransactionFilter] = useState<
     "all" | "expenses" | "income"
   >("all");
-  const [transactions, setTransactions] = useState<
-    Array<{
-      id: string;
-      name: string;
-      category: string;
-      amount: number;
-      date: string;
-      type: "income" | "expense";
-    }>
-  >([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   useEffect(() => {
-    const fetchCalculations = async () => {
+    const fetchData = async () => {
       if (!currentUser) {
         setLoading(false);
         return;
       }
       try {
-        const data = await getUserCalculations(currentUser.uid);
-        setCalculations(data);
+        const [calcs, txns] = await Promise.all([
+          getUserCalculations(currentUser.uid),
+          getUserTransactions(currentUser.uid),
+        ]);
+        setCalculations(calcs);
+        setTransactions(txns);
       } catch (error) {
-        console.error("Error fetching calculations:", error);
-        toast.error("Failed to load calculations");
+        console.error("Error fetching data:", error);
+        toast.error("Failed to load data");
       } finally {
         setLoading(false);
       }
     };
-    fetchCalculations();
+    fetchData();
   }, [currentUser]);
 
   /* ── Formatters ── */
@@ -269,7 +274,7 @@ const Dashboard = () => {
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const handleEditTransaction = (transaction: (typeof transactions)[0]) => {
-    setEditingTransaction(transaction.id);
+    setEditingTransaction(transaction.id ?? null);
     setTransactionName(transaction.name);
     setTransactionCategory(transaction.category);
     setTransactionAmount(transaction.amount.toString());
@@ -278,12 +283,17 @@ const Dashboard = () => {
     setShowAddTransaction(true);
   };
 
-  const handleDeleteTransaction = (id: string) => {
-    setTransactions(transactions.filter((t) => t.id !== id));
-    toast.success("Transaction deleted successfully!");
+  const handleDeleteTransaction = async (id: string) => {
+    try {
+      await deleteTransaction(id);
+      setTransactions(transactions.filter((t) => t.id !== id));
+      toast.success("Transaction deleted successfully!");
+    } catch {
+      toast.error("Failed to delete transaction");
+    }
   };
 
-  const handleAddTransaction = () => {
+  const handleAddTransaction = async () => {
     if (
       !transactionName ||
       !transactionCategory ||
@@ -293,33 +303,41 @@ const Dashboard = () => {
       toast.error("Please fill in all fields");
       return;
     }
-    if (editingTransaction) {
-      setTransactions(
-        transactions.map((t) =>
-          t.id === editingTransaction
-            ? {
-                ...t,
-                name: transactionName,
-                category: transactionCategory,
-                amount: parseFloat(transactionAmount),
-                date: transactionDate,
-                type: transactionType as "income" | "expense",
-              }
-            : t
-        )
-      );
-      toast.success("Transaction updated successfully!");
-    } else {
-      const newTransaction = {
-        id: Date.now().toString(),
-        name: transactionName,
-        category: transactionCategory,
-        amount: parseFloat(transactionAmount),
-        date: transactionDate,
-        type: transactionType as "income" | "expense",
-      };
-      setTransactions([...transactions, newTransaction]);
-      toast.success("Transaction added successfully!");
+    try {
+      if (editingTransaction) {
+        const updates = {
+          name: transactionName,
+          category: transactionCategory,
+          amount: parseFloat(transactionAmount),
+          date: transactionDate,
+          type: transactionType as "income" | "expense",
+        };
+        await updateTransaction(editingTransaction, updates);
+        setTransactions(
+          transactions.map((t) =>
+            t.id === editingTransaction ? { ...t, ...updates } : t
+          )
+        );
+        toast.success("Transaction updated successfully!");
+      } else {
+        const txData = {
+          userId: currentUser!.uid,
+          name: transactionName,
+          category: transactionCategory,
+          amount: parseFloat(transactionAmount),
+          date: transactionDate,
+          type: transactionType as "income" | "expense",
+        };
+        const newId = await addTransaction(txData);
+        setTransactions([
+          ...transactions,
+          { ...txData, id: newId, createdAt: new Date() },
+        ]);
+        toast.success("Transaction added successfully!");
+      }
+    } catch {
+      toast.error("Failed to save transaction");
+      return;
     }
     setShowAddTransaction(false);
     setEditingTransaction(null);
@@ -630,9 +648,17 @@ const Dashboard = () => {
             sidebarExpanded ? "w-48 px-3" : "w-16"
           }`}
         >
+          {/* Expand / Collapse toggle — top */}
+          <button
+            onClick={() => setSidebarExpanded(!sidebarExpanded)}
+            className={`mb-1 w-9 h-9 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors ${sidebarExpanded ? "self-end" : ""}`}
+          >
+            <ChevronRight className={`w-4 h-4 transition-transform ${sidebarExpanded ? "rotate-180" : ""}`} />
+          </button>
+
           <SidebarIcon
             icon={LayoutDashboard}
-            label="Dashboard"
+            label={t.nav.dashboard}
             active={activeTab === "dashboard"}
             expanded={sidebarExpanded}
             onClick={() => {
@@ -642,7 +668,7 @@ const Dashboard = () => {
           />
           <SidebarIcon
             icon={DollarSign}
-            label="Finances"
+            label={t.nav.finances}
             active={activeTab === "finances"}
             expanded={sidebarExpanded}
             onClick={() => {
@@ -652,30 +678,22 @@ const Dashboard = () => {
           />
           <SidebarIcon
             icon={Sliders}
-            label="Scenarios"
+            label={t.nav.scenarios}
             expanded={sidebarExpanded}
             onClick={() => navigate("/scenarios")}
           />
           <SidebarIcon
             icon={Pencil}
-            label="Edit"
+            label={t.nav.edit}
             expanded={sidebarExpanded}
             onClick={() => navigate("/edit")}
           />
           <SidebarIcon
             icon={Settings}
-            label="Settings"
+            label={t.nav.settings}
             expanded={sidebarExpanded}
             onClick={() => navigate("/settings")}
           />
-
-          {/* Expand / Collapse toggle */}
-          <button
-            onClick={() => setSidebarExpanded(!sidebarExpanded)}
-            className="mt-auto w-9 h-9 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
-          >
-            <ChevronRight className={`w-4 h-4 transition-transform ${sidebarExpanded ? "rotate-180" : ""}`} />
-          </button>
         </aside>
 
         {/* ──────────────────────────────────
@@ -684,11 +702,11 @@ const Dashboard = () => {
         <div className="lg:hidden border-b border-border w-full bg-white">
           <div className="flex gap-1 justify-center overflow-x-auto px-2">
             {[
-              { key: "dashboard", label: "Dashboard", path: "/dashboard" },
-              { key: "finances", label: "Finances", path: "/my-finances" },
-              { key: "scenarios", label: "Scenarios", path: "/scenarios" },
-              { key: "edit", label: "Edit", path: "/edit" },
-              { key: "settings", label: "Settings", path: "/settings" },
+              { key: "dashboard", label: t.nav.dashboard, path: "/dashboard" },
+              { key: "finances", label: t.nav.finances, path: "/my-finances" },
+              { key: "scenarios", label: t.nav.scenarios, path: "/scenarios" },
+              { key: "edit", label: t.nav.edit, path: "/edit" },
+              { key: "settings", label: t.nav.settings, path: "/settings" },
             ].map((tab) => (
               <button
                 key={tab.key}
@@ -722,10 +740,10 @@ const Dashboard = () => {
               {/* Welcome */}
               <div className="mb-6">
                 <h1 className="text-2xl md:text-3xl font-bold mb-1">
-                  Welcome !
+                  {t.dashboard.welcome}!
                 </h1>
                 <p className="text-muted-foreground">
-                  Here's your financial overview
+                  {t.dashboard.financialTimeline}
                 </p>
               </div>
 
@@ -782,7 +800,7 @@ const Dashboard = () => {
                 <div className="lg:col-span-3">
                   <div className="flex items-center gap-2 mb-4">
                     <BarChart3 className="w-5 h-5 text-muted-foreground" />
-                    <h2 className="text-lg font-bold">Financial Timeline</h2>
+                    <h2 className="text-lg font-bold">{t.dashboard.financialTimeline}</h2>
                   </div>
 
                   <Card className="bg-white shadow-sm overflow-hidden">
@@ -917,39 +935,49 @@ const Dashboard = () => {
                 <div className="lg:col-span-2">
                   <div className="flex items-center gap-2 mb-4">
                     <Bell className="w-5 h-5 text-muted-foreground" />
-                    <h2 className="text-lg font-bold">Notification Center</h2>
+                    <h2 className="text-lg font-bold">{t.dashboard.notificationCenter}</h2>
                   </div>
 
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {notifications.map((n, i) => (
                       <Card
                         key={i}
-                        className="bg-white shadow-sm border border-border hover:shadow-md transition-shadow"
+                        className={`border-l-4 shadow-sm hover:shadow-md transition-shadow ${
+                          n.icon === "thumbsUp"
+                            ? "bg-green-50 border-l-green-400 border-t-green-100 border-r-green-100 border-b-green-100"
+                            : n.icon === "warning"
+                            ? "bg-red-50 border-l-red-400 border-t-red-100 border-r-red-100 border-b-red-100"
+                            : "bg-yellow-50 border-l-yellow-400 border-t-yellow-100 border-r-yellow-100 border-b-yellow-100"
+                        }`}
                       >
-                        <CardContent className="py-4 px-5">
+                        <CardContent className="py-3.5 px-5">
                           <div className="flex items-start gap-3">
                             <div
                               className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${
                                 n.icon === "thumbsUp"
-                                  ? "bg-green-100"
+                                  ? "bg-green-200"
                                   : n.icon === "warning"
-                                  ? "bg-red-100"
-                                  : "bg-yellow-100"
+                                  ? "bg-red-200"
+                                  : "bg-yellow-200"
                               }`}
                             >
                               {n.icon === "thumbsUp" && (
-                                <ThumbsUp className="w-4 h-4 text-green-600" />
+                                <ThumbsUp className="w-4 h-4 text-green-700" />
                               )}
                               {n.icon === "warning" && (
-                                <AlertCircle className="w-4 h-4 text-red-600" />
+                                <AlertCircle className="w-4 h-4 text-red-700" />
                               )}
                               {n.icon === "info" && (
-                                <AlertCircle className="w-4 h-4 text-yellow-600" />
+                                <AlertCircle className="w-4 h-4 text-yellow-700" />
                               )}
                             </div>
-                            <div>
-                              <p className="font-bold text-sm">{n.title}</p>
-                              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                            <div className="flex-1">
+                              <p className={`font-bold text-sm ${
+                                n.icon === "thumbsUp" ? "text-green-800" : n.icon === "warning" ? "text-red-800" : "text-yellow-800"
+                              }`}>{n.title}</p>
+                              <p className={`text-xs mt-1 leading-relaxed ${
+                                n.icon === "thumbsUp" ? "text-green-700" : n.icon === "warning" ? "text-red-700" : "text-yellow-700"
+                              }`}>
                                 {n.description}
                               </p>
                             </div>
@@ -992,16 +1020,16 @@ const Dashboard = () => {
                 {/* Your Financial Health */}
                 <div>
                   <div className="flex items-center gap-2 mb-4">
-                    <Heart className="w-5 h-5 text-muted-foreground" />
+                    <Activity className="w-5 h-5 text-muted-foreground" />
                     <h2 className="text-lg font-bold">
-                      Your financial health
+                      {t.dashboard.financialHealth}
                     </h2>
                   </div>
 
                   <Card className="bg-white shadow-sm">
                     <CardContent className="py-5 px-5">
                       <h3 className="font-bold text-base mb-5">
-                        Semester health
+                        {t.dashboard.semesterHealth}
                       </h3>
 
                       <div className="space-y-4">
@@ -1025,9 +1053,9 @@ const Dashboard = () => {
                                   {formatCurrency(s.balance)}
                                 </span>
                               </div>
-                              <div className="w-full h-6 bg-gray-100 rounded-lg overflow-hidden">
+                              <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
                                 <div
-                                  className={`h-full rounded-lg transition-all ${s.health.color}`}
+                                  className={`h-full rounded-full transition-all ${s.health.color}`}
                                   style={{
                                     width: `${Math.max(barWidth, 4)}%`,
                                   }}
@@ -1160,8 +1188,23 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              {/* ── Financial Breakdown + Scenarios CTA ── */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              {/* ── Scenarios CTA ── */}
+              <div className="mb-4 flex items-center gap-4">
+                <p className="text-muted-foreground text-sm">
+                  Test What-if scenarios to see what you can adjust for a better financial standing
+                </p>
+                <Button
+                  variant="outline"
+                  className="rounded-full px-6 py-5 text-sm font-semibold border-border hover:bg-gray-50 flex-shrink-0"
+                  onClick={() => navigate("/scenarios")}
+                >
+                  <Sliders className="w-4 h-4 mr-2" />
+                  Scenarios
+                </Button>
+              </div>
+
+              {/* ── Financial Breakdown (full width) ── */}
+              <div className="mb-8">
                 {/* Financial Breakdown */}
                 <div>
                   <div className="flex items-center gap-2 mb-4">
@@ -1270,24 +1313,6 @@ const Dashboard = () => {
                     </CardContent>
                   </Card>
                 </div>
-
-                {/* Scenarios CTA */}
-                <div className="flex flex-col justify-end">
-                  <div className="mt-auto">
-                    <p className="text-muted-foreground text-sm mb-4 max-w-sm">
-                      Test What-if scenarios to see what you can adjust for a
-                      better financial standing
-                    </p>
-                    <Button
-                      variant="outline"
-                      className="rounded-full px-6 py-5 text-sm font-semibold border-border hover:bg-gray-50"
-                      onClick={() => navigate("/scenarios")}
-                    >
-                      <Sliders className="w-4 h-4 mr-2" />
-                      Scenarios
-                    </Button>
-                  </div>
-                </div>
               </div>
             </div>
           )}
@@ -1309,7 +1334,7 @@ const Dashboard = () => {
                   className="bg-red-500 hover:bg-red-600 text-white"
                   onClick={() => setShowAddTransaction(true)}
                 >
-                  + Add transaction
+                  + {t.dashboard.addTransaction}
                 </Button>
               </div>
 
@@ -1631,10 +1656,10 @@ const Dashboard = () => {
                       ) : (
                         <div className="text-center py-8">
                           <p className="text-muted-foreground">
-                            No transactions yet
+                            {t.dashboard.noTransactions}
                           </p>
                           <p className="text-sm text-muted-foreground mt-1">
-                            Click "+ Add transaction" to get started
+                            {t.dashboard.addFirstTransaction}
                           </p>
                         </div>
                       )}

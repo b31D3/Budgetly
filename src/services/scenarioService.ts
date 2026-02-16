@@ -1,12 +1,15 @@
 import { db } from "@/lib/firebase";
 import { collection, addDoc, getDocs, deleteDoc, doc, query, where, Timestamp, updateDoc, deleteField } from "firebase/firestore";
 
+export type ScenarioPeriod = "all" | "summer" | "school" | "winter" | "fall";
+
 export interface ScenarioData {
   id?: string;
   userId: string;
   name: string;
   monthlyIncomeChange: number; // Change in monthly income
   monthlyExpenseChange: number; // Change in monthly expenses
+  period?: ScenarioPeriod; // When the monthly change applies (default: "all")
   oneTimeEvent?: {
     name: string;
     amount: number;
@@ -28,6 +31,7 @@ export const saveScenario = async (data: Omit<ScenarioData, "id" | "createdAt">)
       name: data.name,
       monthlyIncomeChange: data.monthlyIncomeChange,
       monthlyExpenseChange: data.monthlyExpenseChange,
+      period: data.period ?? "all",
       projectedBalance: data.projectedBalance,
       createdAt: Timestamp.now(),
     };

@@ -13,6 +13,9 @@ import {
   ArrowRight,
   ArrowLeft,
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { saveCalculation } from "@/services/calculatorService";
+import { calculateSemesterBreakdown, calculateSummary } from "@/lib/calculator";
 
 // ─── Bubble config ───
 const bubbles = [
@@ -136,7 +139,9 @@ const RadioOption = ({
 
 const Onboarding = () => {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const [step, setStep] = useState(1);
+  const [saving, setSaving] = useState(false);
 
   // Step 2 state
   const [school, setSchool] = useState("");
@@ -195,13 +200,103 @@ const Onboarding = () => {
     return true;
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!validateStep()) return;
     if (step < 4) {
       setStep(step + 1);
-    } else {
-      // Final step — navigate to dashboard
-      navigate("/dashboard");
+      return;
+    }
+
+    // Final step — compute and save calculation, then go to dashboard
+    if (!currentUser) {
+      navigate("/signin");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const formData = {
+        semestersLeft,
+        tuition,
+        books,
+        supplies: "0",
+        rent,
+        utilities,
+        groceries,
+        cellPhone: phone,
+        transportation,
+        memberships,
+        hasJob: hasJob as string,
+        hoursPerWeekSchool: hoursSchool,
+        hoursPerWeekSummer: hoursSummer,
+        hourlyRate,
+        scholarship,
+        bursary,
+        grant,
+        savings,
+      };
+
+      const semesterData = calculateSemesterBreakdown(formData);
+      const summary = calculateSummary(semesterData);
+
+      const tuitionNum = parseFloat(tuition) || 0;
+      const rentNum = parseFloat(rent) || 0;
+      const groceriesNum = parseFloat(groceries) || 0;
+      const booksNum = parseFloat(books) || 0;
+      const transportNum = parseFloat(transportation) || 0;
+      const savingsNum = parseFloat(savings) || 0;
+
+      const utilitiesNum = parseFloat(utilities) || 0;
+      const phoneNum = parseFloat(phone) || 0;
+      const membershipsNum = parseFloat(memberships) || 0;
+
+      await saveCalculation({
+        userId: currentUser.uid,
+        tuition: tuitionNum,
+        creditsPerSemester: 0,
+        semestersPerYear: 2,
+        yearsToGraduate: Math.ceil(parseInt(semestersLeft) / 2),
+        housingCost: rentNum * 12,
+        mealPlanCost: groceriesNum * 12,
+        booksCost: booksNum,
+        transportationCost: transportNum * 12,
+        otherExpenses: (utilitiesNum + phoneNum + membershipsNum) * 12,
+        totalCost: summary.totalCosts,
+        costPerCredit: 0,
+        costPerYear: tuitionNum + (rentNum + groceriesNum + phoneNum + utilitiesNum + transportNum + membershipsNum) * 12,
+        currentBalance: savingsNum,
+        remainingSemesters: parseInt(semestersLeft),
+        projectedBalance: summary.finalBalance,
+        semesterData,
+        formInputs: {
+          studentType,
+          semestersLeft,
+          books,
+          supplies: "0",
+          housing,
+          rent,
+          utilities,
+          groceries,
+          cellPhone: phone,
+          transportation,
+          memberships,
+          hasJob: hasJob as string,
+          hoursPerWeekSchool: hoursSchool,
+          hoursPerWeekSummer: hoursSummer,
+          hourlyRate,
+          scholarship,
+          bursary,
+          grant,
+          savings,
+        },
+      });
+
+      navigate("/verify-email");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to save your plan. Please try again.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -565,10 +660,11 @@ const Onboarding = () => {
             </Button>
             <Button
               onClick={handleNext}
+              disabled={saving}
               className="bg-red-500 hover:bg-red-600 text-white rounded-full px-6 py-5 text-sm font-semibold gap-2"
             >
-              {step === 4 ? "Start planning" : "Next"}
-              <ArrowRight className="w-4 h-4" />
+              {saving ? "Saving..." : step === 4 ? "Start planning" : "Next"}
+              {!saving && <ArrowRight className="w-4 h-4" />}
             </Button>
           </div>
         </div>

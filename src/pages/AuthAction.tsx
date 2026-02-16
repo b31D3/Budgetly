@@ -45,6 +45,10 @@ const AuthAction = () => {
         switch (actionMode) {
           case "verifyEmail":
             await applyActionCode(auth, oobCode);
+            // Reload the user so emailVerified updates immediately
+            if (auth.currentUser) {
+              await auth.currentUser.reload();
+            }
             setSuccess(true);
             toast.success("Email verified successfully!");
             break;

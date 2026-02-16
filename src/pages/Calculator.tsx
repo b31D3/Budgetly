@@ -1,16 +1,58 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import CalculatorFormImproved from "@/components/CalculatorFormImproved";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { getUserCalculations } from "@/services/calculatorService";
-import { Sliders } from "lucide-react";
+import {
+  LayoutDashboard,
+  DollarSign,
+  Sliders,
+  Pencil,
+  Settings,
+  ChevronRight,
+} from "lucide-react";
+
+// ─── Sidebar icon ───
+const SidebarIcon = ({
+  icon: Icon,
+  label,
+  active,
+  expanded,
+  onClick,
+}: {
+  icon: any;
+  label: string;
+  active?: boolean;
+  expanded?: boolean;
+  onClick?: () => void;
+}) => (
+  <button
+    onClick={onClick}
+    className={`flex items-center gap-3 rounded-xl transition-all ${
+      expanded ? "w-full px-3 py-2.5" : "w-11 h-11 justify-center"
+    } ${
+      active
+        ? "bg-red-100 text-red-500 shadow-sm"
+        : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+    }`}
+  >
+    <Icon className="w-5 h-5 flex-shrink-0" />
+    {expanded && (
+      <span className={`text-sm font-medium whitespace-nowrap ${active ? "text-red-500" : "text-foreground"}`}>
+        {label}
+      </span>
+    )}
+  </button>
+);
 
 const Calculator = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
 
   useEffect(() => {
     const checkUserCalculations = async () => {
@@ -18,15 +60,11 @@ const Calculator = () => {
         setLoading(false);
         return;
       }
-
       try {
-        const calculations = await getUserCalculations(currentUser.uid);
-
-        // If user has calculations, we'll load the most recent one in the form
-        // The CalculatorFormImproved component will handle loading from localStorage
-        setLoading(false);
+        await getUserCalculations(currentUser.uid);
       } catch (error) {
         console.error("Error checking calculations:", error);
+      } finally {
         setLoading(false);
       }
     };
@@ -34,127 +72,38 @@ const Calculator = () => {
     checkUserCalculations();
   }, [currentUser]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-
-        {/* Tab Navigation */}
-        <div className="border-b border-border">
-          <div className="container mx-auto">
-            <div className="flex gap-8 justify-center">
-              <button
-                onClick={() => navigate("/dashboard")}
-                className="flex items-center gap-2 px-4 py-4 border-b-2 transition-colors border-transparent text-muted-foreground hover:text-foreground"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                Dashboard
-              </button>
-              <button
-                onClick={() => navigate("/dashboard")}
-                className="flex items-center gap-2 px-4 py-4 border-b-2 transition-colors border-transparent text-muted-foreground hover:text-foreground"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Finances
-              </button>
-              <button
-                onClick={() => navigate("/scenarios")}
-                className="flex items-center gap-2 px-4 py-4 border-b-2 transition-colors border-transparent text-muted-foreground hover:text-foreground"
-              >
-                <Sliders className="w-5 h-5" />
-                Scenarios
-              </button>
-              <button
-                className="flex items-center gap-2 px-4 py-4 border-b-2 transition-colors border-primary text-primary font-medium"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-                Edit
-              </button>
-              <button
-                onClick={() => navigate("/dashboard")}
-                className="flex items-center gap-2 px-4 py-4 border-b-2 transition-colors border-transparent text-muted-foreground hover:text-foreground"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                Settings
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="container mx-auto px-12 py-6">
-          <p>Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
 
-      {/* Tab Navigation */}
-      <div className="border-b border-border">
-        <div className="container mx-auto px-4 overflow-x-auto">
-          <div className="flex gap-2 md:gap-8 justify-center">
-            <button
-              onClick={() => navigate("/dashboard")}
-              className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-4 border-b-2 transition-colors whitespace-nowrap text-sm md:text-base border-transparent text-muted-foreground hover:text-foreground"
-            >
-              <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-              <span className="hidden sm:inline">Dashboard</span>
-            </button>
-            <button
-              onClick={() => navigate("/my-finances")}
-              className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-4 border-b-2 transition-colors whitespace-nowrap text-sm md:text-base border-transparent text-muted-foreground hover:text-foreground"
-            >
-              <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="hidden sm:inline">Finances</span>
-            </button>
-            <button
-              onClick={() => navigate("/scenarios")}
-              className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-4 border-b-2 transition-colors whitespace-nowrap text-sm md:text-base border-transparent text-muted-foreground hover:text-foreground"
-            >
-              <Sliders className="w-4 h-4 md:w-5 md:h-5" />
-              <span className="hidden sm:inline">Scenarios</span>
-            </button>
-            <button
-              className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-4 border-b-2 transition-colors whitespace-nowrap text-sm md:text-base border-primary text-primary font-medium"
-            >
-              <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              <span className="hidden sm:inline">Edit</span>
-            </button>
-            <button
-              onClick={() => navigate("/settings")}
-              className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-4 border-b-2 transition-colors whitespace-nowrap text-sm md:text-base border-transparent text-muted-foreground hover:text-foreground"
-            >
-              <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              <span className="hidden sm:inline">Settings</span>
-            </button>
-          </div>
-        </div>
+      <div className="flex flex-1">
+        {/* ── Left Sidebar ── */}
+        <aside className={`border-r border-border bg-white flex flex-col items-center py-4 gap-2 sticky top-[57px] h-[calc(100vh-57px)] flex-shrink-0 transition-all duration-200 ${sidebarExpanded ? "w-48 px-3" : "w-16"}`}>
+          {/* Expand toggle — top */}
+          <button
+            onClick={() => setSidebarExpanded(!sidebarExpanded)}
+            className={`mb-1 w-9 h-9 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors ${sidebarExpanded ? "self-end" : ""}`}
+          >
+            <ChevronRight className={`w-4 h-4 transition-transform ${sidebarExpanded ? "rotate-180" : ""}`} />
+          </button>
+          <SidebarIcon icon={LayoutDashboard} label={t.nav.dashboard} expanded={sidebarExpanded} onClick={() => navigate("/dashboard")} />
+          <SidebarIcon icon={DollarSign} label={t.nav.finances} expanded={sidebarExpanded} onClick={() => navigate("/dashboard?tab=finances")} />
+          <SidebarIcon icon={Sliders} label={t.nav.scenarios} expanded={sidebarExpanded} onClick={() => navigate("/scenarios")} />
+          <SidebarIcon icon={Pencil} label={t.nav.edit} active expanded={sidebarExpanded} />
+          <SidebarIcon icon={Settings} label={t.nav.settings} expanded={sidebarExpanded} onClick={() => navigate("/settings")} />
+        </aside>
+
+        {/* ── Main content ── */}
+        <main className="flex-1 overflow-auto">
+          {loading ? (
+            <div className="px-8 py-8">
+              <p className="text-sm text-muted-foreground">{t.common.loading}</p>
+            </div>
+          ) : (
+            <CalculatorFormImproved editMode={true} />
+          )}
+        </main>
       </div>
-
-      <CalculatorFormImproved editMode={true} />
-
-      <Footer />
     </div>
   );
 };

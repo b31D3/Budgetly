@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -21,14 +21,25 @@ import {
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-import { Briefcase, DollarSign, X, Sliders } from "lucide-react";
+import {
+  Briefcase,
+  DollarSign,
+  Sliders,
+  LayoutDashboard,
+  Settings,
+  Pencil,
+  TrendingUp,
+  TrendingDown,
+  Calendar,
+  ChevronRight,
+} from "lucide-react";
 import {
   getUserScenarios,
   saveScenario,
   deleteScenario,
   updateScenario,
   type ScenarioData,
+  type ScenarioPeriod,
 } from "@/services/scenarioService";
 import { getUserCalculations, type CalculationData } from "@/services/calculatorService";
 import {
@@ -43,182 +54,173 @@ import {
   ReferenceLine,
 } from "recharts";
 
-// Helper function to get current semester based on date
+// ─── Sidebar icon ───
+const SidebarIcon = ({
+  icon: Icon,
+  label,
+  active,
+  expanded,
+  onClick,
+}: {
+  icon: any;
+  label: string;
+  active?: boolean;
+  expanded?: boolean;
+  onClick?: () => void;
+}) => (
+  <button
+    onClick={onClick}
+    className={`flex items-center gap-3 rounded-xl transition-all ${
+      expanded ? "w-full px-3 py-2.5" : "w-11 h-11 justify-center"
+    } ${
+      active
+        ? "bg-red-100 text-red-500 shadow-sm"
+        : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+    }`}
+  >
+    <Icon className="w-5 h-5 flex-shrink-0" />
+    {expanded && (
+      <span className={`text-sm font-medium whitespace-nowrap ${active ? "text-red-500" : "text-foreground"}`}>
+        {label}
+      </span>
+    )}
+  </button>
+);
+
+// ─── Period helpers ───
+const PERIOD_OPTIONS: { value: ScenarioPeriod; label: string; months: number }[] = [
+  { value: "all",    label: "All year",        months: 12 },
+  { value: "summer", label: "Summer only",      months: 4  },
+  { value: "school", label: "School year only", months: 8  },
+  { value: "winter", label: "Winter only",      months: 4  },
+  { value: "fall",   label: "Fall only",        months: 4  },
+];
+
+const getPeriodMonths = (period: ScenarioPeriod = "all") =>
+  PERIOD_OPTIONS.find((p) => p.value === period)?.months ?? 12;
+
+const getPeriodLabel = (period: ScenarioPeriod = "all") =>
+  PERIOD_OPTIONS.find((p) => p.value === period)?.label ?? "All year";
+
+// ─── Semester helpers ───
 const getCurrentSemester = (): { semester: string; year: number } => {
   const now = new Date();
-  const month = now.getMonth() + 1; // getMonth() returns 0-11
+  const month = now.getMonth() + 1;
   const year = now.getFullYear();
-
-  if (month >= 1 && month <= 4) {
-    return { semester: "Winter", year };
-  } else if (month >= 5 && month <= 8) {
-    return { semester: "Summer", year };
-  } else {
-    return { semester: "Fall", year };
-  }
+  if (month >= 1 && month <= 4) return { semester: "Winter", year };
+  if (month >= 5 && month <= 8) return { semester: "Summer", year };
+  return { semester: "Fall", year };
 };
 
-// Helper function to generate semester options starting from current semester
-const generateSemesterOptions = (count: number = 6): string[] => {
-  const { semester: currentSemester, year: currentYear } = getCurrentSemester();
-  const semesters: string[] = [];
-  const semesterOrder = ["Winter", "Summer", "Fall"];
-
-  let semesterIndex = semesterOrder.indexOf(currentSemester);
-  let year = currentYear;
-
+const generateSemesterOptions = (count = 9): string[] => {
+  const { semester: cur, year: curYear } = getCurrentSemester();
+  const order = ["Winter", "Summer", "Fall"];
+  let idx = order.indexOf(cur);
+  let year = curYear;
+  const list: string[] = [];
   for (let i = 0; i < count; i++) {
-    semesters.push(`${semesterOrder[semesterIndex]} ${year}`);
-
-    // Move to next semester
-    semesterIndex++;
-    if (semesterIndex >= semesterOrder.length) {
-      semesterIndex = 0;
-      year++;
-    }
+    list.push(`${order[idx]} ${year}`);
+    idx++;
+    if (idx >= order.length) { idx = 0; year++; }
   }
-
-  return semesters;
+  return list;
 };
 
 const Scenarios = () => {
   const { currentUser } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [scenarios, setScenarios] = useState<ScenarioData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [selectedScenario, setSelectedScenario] = useState<ScenarioData | null>(null);
   const [latestCalculation, setLatestCalculation] = useState<CalculationData | null>(null);
 
-  // Generate semester options starting from current semester (3 years = 9 semesters)
   const semesterOptions = generateSemesterOptions(9);
 
-  // Form states
+  // Form state
   const [scenarioName, setScenarioName] = useState("");
   const [monthlyIncomeChange, setMonthlyIncomeChange] = useState(0);
   const [monthlyExpenseChange, setMonthlyExpenseChange] = useState(0);
+  const [period, setPeriod] = useState<ScenarioPeriod>("all");
   const [oneTimeEventName, setOneTimeEventName] = useState("");
   const [oneTimeEventAmount, setOneTimeEventAmount] = useState("");
   const [oneTimeEventEffect, setOneTimeEventEffect] = useState<"income" | "expense">("expense");
   const [oneTimeEventSemester, setOneTimeEventSemester] = useState("");
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (!currentUser) {
-        setLoading(false);
-        return;
-      }
-
+    if (!currentUser) { setLoading(false); return; }
+    (async () => {
       try {
-        const [scenariosData, calculationsData] = await Promise.all([
+        const [scenariosData, calcs] = await Promise.all([
           getUserScenarios(currentUser.uid),
           getUserCalculations(currentUser.uid),
         ]);
         setScenarios(scenariosData);
-        setLatestCalculation(calculationsData.length > 0 ? calculationsData[0] : null);
-      } catch (error) {
-        console.error("Error fetching data:", error);
+        setLatestCalculation(calcs.length > 0 ? calcs[0] : null);
+      } catch {
         toast.error("Failed to load scenarios");
       } finally {
         setLoading(false);
       }
-    };
-
-    fetchData();
+    })();
   }, [currentUser]);
 
   const calculateScenarioImpact = (
     incomeChange: number,
     expenseChange: number,
+    scenarioPeriod: ScenarioPeriod = "all",
     oneTimeEvent?: { amount: number; effect: "income" | "expense"; semester: string }
   ): number => {
     if (!latestCalculation) return 0;
-
-    // Start with the projected balance from the calculator (balance at graduation)
-    const baseProjectedBalance = latestCalculation.projectedBalance || 0;
-
-    // FIXED: Use 36 months (6 semesters) unless otherwise specified
-    // User specified: 36 months = 6 semesters
-    const totalMonths = 36;
-
-    // Calculate monthly net change (positive = more money, negative = less money)
-    // If income increases by $100 and expenses stay same: +$100/month net change
-    // If income stays same and expenses increase by $50: -$50/month net change
+    const base = latestCalculation.projectedBalance || 0;
     const monthlyNetChange = incomeChange - expenseChange;
-
-    // Calculate total impact over 36 months (6 semesters)
-    const totalMonthlyImpact = monthlyNetChange * totalMonths;
-
-    // Add one-time event impact
-    let oneTimeImpact = 0;
-    if (oneTimeEvent && oneTimeEvent.amount > 0) {
-      oneTimeImpact = oneTimeEvent.effect === "income"
-        ? oneTimeEvent.amount
-        : -oneTimeEvent.amount;
-    }
-
-    // MATH EXPLANATION:
-    // Example: Baseline = $5,112, Car loan = $340/month expense
-    // monthlyNetChange = 0 - 340 = -$340
-    // totalMonthlyImpact = -340 × 36 months = -$12,240
-    // newBalance = 5,112 + (-12,240) = -$7,128
-    //
-    // This matches your expected result!
-
-    // New projected balance = base projected balance + monthly changes + one-time events
-    return baseProjectedBalance + totalMonthlyImpact + oneTimeImpact;
+    // Derive total applicable months from remaining semesters + period filter
+    const years = (latestCalculation.remainingSemesters || 6) / 2;
+    const applicableMonths = getPeriodMonths(scenarioPeriod) * years;
+    const totalMonthlyImpact = monthlyNetChange * applicableMonths;
+    const oneTimeImpact = oneTimeEvent && oneTimeEvent.amount > 0
+      ? (oneTimeEvent.effect === "income" ? oneTimeEvent.amount : -oneTimeEvent.amount)
+      : 0;
+    return base + totalMonthlyImpact + oneTimeImpact;
   };
 
+  const resetForm = () => {
+    setScenarioName("");
+    setMonthlyIncomeChange(0);
+    setMonthlyExpenseChange(0);
+    setPeriod("all");
+    setOneTimeEventName("");
+    setOneTimeEventAmount("");
+    setOneTimeEventSemester("");
+    setOneTimeEventEffect("expense");
+  };
+
+  const getOneTimeEvent = () =>
+    oneTimeEventName.trim() && parseFloat(oneTimeEventAmount) > 0 && oneTimeEventSemester
+      ? { name: oneTimeEventName, amount: parseFloat(oneTimeEventAmount), effect: oneTimeEventEffect, semester: oneTimeEventSemester }
+      : undefined;
+
   const handleCreateScenario = async () => {
-    if (!currentUser || !scenarioName.trim()) {
-      toast.error("Please enter a scenario name");
-      return;
-    }
-
+    if (!currentUser || !scenarioName.trim()) { toast.error("Please enter a scenario name"); return; }
     try {
-      const oneTimeEvent = oneTimeEventName.trim() && parseFloat(oneTimeEventAmount) > 0 && oneTimeEventSemester
-        ? {
-            name: oneTimeEventName,
-            amount: parseFloat(oneTimeEventAmount),
-            effect: oneTimeEventEffect,
-            semester: oneTimeEventSemester,
-          }
-        : undefined;
-
-      const projectedBalance = calculateScenarioImpact(
-        monthlyIncomeChange,
-        monthlyExpenseChange,
-        oneTimeEvent
-      );
-
+      const oneTimeEvent = getOneTimeEvent();
       await saveScenario({
         userId: currentUser.uid,
         name: scenarioName,
         monthlyIncomeChange,
         monthlyExpenseChange,
+        period,
         oneTimeEvent,
-        projectedBalance,
+        projectedBalance: calculateScenarioImpact(monthlyIncomeChange, monthlyExpenseChange, period, oneTimeEvent),
       });
-
-      // Refresh scenarios
-      const updatedScenarios = await getUserScenarios(currentUser.uid);
-      setScenarios(updatedScenarios);
-
-      // Reset form
-      setScenarioName("");
-      setMonthlyIncomeChange(0);
-      setMonthlyExpenseChange(0);
-      setOneTimeEventName("");
-      setOneTimeEventAmount("");
-      setOneTimeEventSemester("");
+      setScenarios(await getUserScenarios(currentUser.uid));
+      resetForm();
       setShowCreateDialog(false);
-
-      toast.success("Scenario created successfully!");
-    } catch (error) {
-      console.error("Error creating scenario:", error);
-      toast.error("Failed to create scenario");
-    }
+      toast.success("Scenario created!");
+    } catch { toast.error("Failed to create scenario"); }
   };
 
   const handleViewDetails = (scenario: ScenarioData) => {
@@ -226,699 +228,452 @@ const Scenarios = () => {
     setScenarioName(scenario.name);
     setMonthlyIncomeChange(scenario.monthlyIncomeChange);
     setMonthlyExpenseChange(scenario.monthlyExpenseChange);
+    setPeriod(scenario.period ?? "all");
     if (scenario.oneTimeEvent) {
       setOneTimeEventName(scenario.oneTimeEvent.name);
       setOneTimeEventAmount(scenario.oneTimeEvent.amount.toString());
       setOneTimeEventEffect(scenario.oneTimeEvent.effect);
       setOneTimeEventSemester(scenario.oneTimeEvent.semester);
     } else {
-      setOneTimeEventName("");
-      setOneTimeEventAmount("");
-      setOneTimeEventSemester("");
+      setOneTimeEventName(""); setOneTimeEventAmount(""); setOneTimeEventSemester("");
     }
     setShowDetailDialog(true);
   };
 
   const handleUpdateScenario = async () => {
     if (!selectedScenario || !currentUser) return;
-
     try {
-      const oneTimeEvent = oneTimeEventName.trim() && parseFloat(oneTimeEventAmount) > 0 && oneTimeEventSemester
-        ? {
-            name: oneTimeEventName,
-            amount: parseFloat(oneTimeEventAmount),
-            effect: oneTimeEventEffect,
-            semester: oneTimeEventSemester,
-          }
-        : undefined;
-
-      const projectedBalance = calculateScenarioImpact(
-        monthlyIncomeChange,
-        monthlyExpenseChange,
-        oneTimeEvent
-      );
-
+      const oneTimeEvent = getOneTimeEvent();
       await updateScenario(selectedScenario.id!, {
         name: scenarioName,
         monthlyIncomeChange,
         monthlyExpenseChange,
+        period,
         oneTimeEvent,
-        projectedBalance,
+        projectedBalance: calculateScenarioImpact(monthlyIncomeChange, monthlyExpenseChange, period, oneTimeEvent),
       });
-
-      const updatedScenarios = await getUserScenarios(currentUser.uid);
-      setScenarios(updatedScenarios);
+      setScenarios(await getUserScenarios(currentUser.uid));
       setShowDetailDialog(false);
-      toast.success("Scenario updated successfully!");
-    } catch (error) {
-      console.error("Error updating scenario:", error);
-      toast.error("Failed to update scenario");
-    }
+      toast.success("Scenario updated!");
+    } catch { toast.error("Failed to update scenario"); }
   };
 
   const handleDeleteScenario = async (scenarioId: string) => {
     try {
       await deleteScenario(scenarioId);
-      const updatedScenarios = await getUserScenarios(currentUser!.uid);
-      setScenarios(updatedScenarios);
+      setScenarios(await getUserScenarios(currentUser!.uid));
       setShowDetailDialog(false);
       toast.success("Scenario deleted");
-    } catch (error) {
-      console.error("Error deleting scenario:", error);
-      toast.error("Failed to delete scenario");
-    }
+    } catch { toast.error("Failed to delete scenario"); }
   };
 
-  const generateScenarioChartData = (scenario: ScenarioData) => {
+  const generateChartData = (scenario: ScenarioData) => {
     if (!latestCalculation?.semesterData) return [];
-
-    const baseData = latestCalculation.semesterData;
     const monthlyChange = scenario.monthlyIncomeChange - scenario.monthlyExpenseChange;
-
-    return baseData.map((semester: any, index: number) => {
-      // Calculate accumulated change up to this semester
-      const monthsElapsed = index * 4;
-      const accumulatedChange = monthlyChange * monthsElapsed;
-
-      // Add one-time event if it affects this semester
-      let oneTimeImpact = 0;
-      if (scenario.oneTimeEvent && semester.semesterLabel === scenario.oneTimeEvent.semester) {
-        oneTimeImpact = scenario.oneTimeEvent.effect === "income"
-          ? scenario.oneTimeEvent.amount
-          : -scenario.oneTimeEvent.amount;
-      }
-
-      return {
-        name: semester.semesterLabel,
-        Current: semester.balance || 0,
-        Scenario: (semester.balance || 0) + accumulatedChange + oneTimeImpact,
-      };
+    return latestCalculation.semesterData.map((s: any, i: number) => {
+      const accumulated = monthlyChange * (i * 4);
+      const oneTime = scenario.oneTimeEvent && s.semesterLabel === scenario.oneTimeEvent.semester
+        ? (scenario.oneTimeEvent.effect === "income" ? scenario.oneTimeEvent.amount : -scenario.oneTimeEvent.amount)
+        : 0;
+      return { name: s.semesterLabel, Current: s.balance || 0, Scenario: (s.balance || 0) + accumulated + oneTime };
     });
   };
 
-  const getScenarioStatus = (projectedBalance: number): { label: string; color: string } => {
-    if (projectedBalance >= 1000) return { label: "Great!", color: "bg-green-100 text-green-700 border-green-200" };
-    if (projectedBalance >= 0) return { label: "Good", color: "bg-blue-100 text-blue-700 border-blue-200" };
-    if (projectedBalance >= -2000) return { label: "Short", color: "bg-red-100 text-red-700 border-red-200" };
-    return { label: "Critical", color: "bg-red-200 text-red-900 border-red-300" };
-  };
+  const formatCurrency = (v: number) =>
+    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(v);
 
-  const getBestScenario = (): ScenarioData | null => {
-    if (scenarios.length === 0) return null;
-    return scenarios.reduce((best, current) =>
-      current.projectedBalance > best.projectedBalance ? current : best
-    );
-  };
+  const getBestScenario = () =>
+    scenarios.length === 0 ? null : scenarios.reduce((b, c) => c.projectedBalance > b.projectedBalance ? c : b);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
+  const getPeriodLabelTranslated = (p: ScenarioPeriod = "all"): string => ({
+    all: t.scenarios.periodAllYear,
+    summer: t.scenarios.periodSummer,
+    school: t.scenarios.periodSchool,
+    winter: t.scenarios.periodWinter,
+    fall: t.scenarios.periodFall,
+  }[p] ?? t.scenarios.periodAllYear);
 
-  if (!currentUser) {
-    navigate("/signin");
-    return null;
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <div className="container mx-auto px-4 md:px-8 lg:px-12 py-6">
-          <p>Loading scenarios...</p>
-        </div>
-      </div>
-    );
-  }
+  if (!currentUser) { navigate("/signin"); return null; }
 
   const bestScenario = getBestScenario();
+
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
 
-      {/* Tab Navigation */}
-      <div className="border-b border-border">
-        <div className="container mx-auto px-4 overflow-x-auto">
-          <div className="flex gap-2 md:gap-8 justify-center">
-            <button
-              onClick={() => navigate("/dashboard")}
-              className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-4 border-b-2 transition-colors whitespace-nowrap text-sm md:text-base border-transparent text-muted-foreground hover:text-foreground"
-            >
-              <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-              <span className="hidden sm:inline">Dashboard</span>
-            </button>
-            <button
-              onClick={() => navigate("/my-finances")}
-              className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-4 border-b-2 transition-colors whitespace-nowrap text-sm md:text-base border-transparent text-muted-foreground hover:text-foreground"
-            >
-              <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="hidden sm:inline">Finances</span>
-            </button>
-            <button
-              className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-4 border-b-2 transition-colors whitespace-nowrap text-sm md:text-base border-primary text-primary font-medium"
-            >
-              <Sliders className="w-4 h-4 md:w-5 md:h-5" />
-              <span className="hidden sm:inline">Scenarios</span>
-            </button>
-            <button
-              onClick={() => navigate("/edit")}
-              className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-4 border-b-2 transition-colors whitespace-nowrap text-sm md:text-base border-transparent text-muted-foreground hover:text-foreground"
-            >
-              <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              <span className="hidden sm:inline">Edit</span>
-            </button>
-            <button
-              onClick={() => navigate("/settings")}
-              className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-4 border-b-2 transition-colors whitespace-nowrap text-sm md:text-base border-transparent text-muted-foreground hover:text-foreground"
-            >
-              <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              <span className="hidden sm:inline">Settings</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="container mx-auto px-4 md:px-8 lg:px-12 py-6">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Your scenarios</h1>
-            <p className="text-muted-foreground">
-              Test different financial decisions to find your best path to graduation
-            </p>
-          </div>
-          <Button
-            onClick={() => setShowCreateDialog(true)}
-            className="bg-red-500 hover:bg-red-600 text-white rounded-lg"
+      <div className="flex flex-1">
+        {/* ── Left Sidebar ── */}
+        <aside className={`border-r border-border bg-white flex flex-col items-center py-4 gap-2 sticky top-[57px] h-[calc(100vh-57px)] flex-shrink-0 transition-all duration-200 ${sidebarExpanded ? "w-48 px-3" : "w-16"}`}>
+          {/* Expand toggle — top */}
+          <button
+            onClick={() => setSidebarExpanded(!sidebarExpanded)}
+            className={`mb-1 w-9 h-9 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors ${sidebarExpanded ? "self-end" : ""}`}
           >
-            + Create new scenario
-          </Button>
-        </div>
+            <ChevronRight className={`w-4 h-4 transition-transform ${sidebarExpanded ? "rotate-180" : ""}`} />
+          </button>
+          <SidebarIcon icon={LayoutDashboard} label={t.nav.dashboard} expanded={sidebarExpanded} onClick={() => navigate("/dashboard")} />
+          <SidebarIcon icon={DollarSign} label={t.nav.finances} expanded={sidebarExpanded} onClick={() => navigate("/dashboard?tab=finances")} />
+          <SidebarIcon icon={Sliders} label={t.nav.scenarios} active expanded={sidebarExpanded} />
+          <SidebarIcon icon={Pencil} label={t.nav.edit} expanded={sidebarExpanded} onClick={() => navigate("/edit")} />
+          <SidebarIcon icon={Settings} label={t.nav.settings} expanded={sidebarExpanded} onClick={() => navigate("/settings")} />
+        </aside>
 
-        {/* Current Plan Card */}
-        {latestCalculation && (
-          <Card className="mb-6 border-2 border-primary/20 bg-gradient-to-br from-background to-accent/5">
-            <CardContent className="pt-6 pb-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="text-lg font-bold">Current plan</h3>
-                    <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full font-medium">
-                      Baseline
-                    </span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Your current financial projection based on calculator inputs
-                  </p>
+        {/* ── Main content ── */}
+        <main className="flex-1 px-8 py-8 overflow-auto">
+          {/* Header */}
+          <div className="flex items-start justify-between mb-8">
+            <div>
+              <h1 className="text-2xl font-bold mb-1">{t.scenarios.title}</h1>
+              <p className="text-sm text-muted-foreground">
+                {t.scenarios.subtitle}
+              </p>
+            </div>
+            <Button
+              onClick={() => { resetForm(); setShowCreateDialog(true); }}
+              className="bg-red-500 hover:bg-red-600 text-white rounded-full px-5 py-2 text-sm font-semibold"
+            >
+              {t.scenarios.addScenario}
+            </Button>
+          </div>
+
+          {/* Current Plan baseline */}
+          {latestCalculation && (
+            <div className="bg-white border border-border rounded-2xl px-6 py-5 mb-6 flex items-center justify-between shadow-sm">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-base font-bold">{t.scenarios.currentPlan}</span>
+                  <span className="text-xs font-medium bg-red-50 text-red-400 border border-red-200 px-2 py-0.5 rounded-full">
+                    {t.scenarios.baseline}
+                  </span>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm text-muted-foreground mb-1">Projected balance at graduation</p>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`text-4xl font-bold ${
-                        (latestCalculation.projectedBalance || 0) >= 0 ? "text-green-600" : "text-red-600"
-                      }`}
-                    >
-                      {(latestCalculation.projectedBalance || 0) >= 0 ? "+" : ""}
-                      {formatCurrency(latestCalculation.projectedBalance || 0)}
-                    </span>
-                  </div>
-                </div>
+                <p className="text-sm text-muted-foreground">
+                  {t.scenarios.currentPlanDesc}
+                </p>
               </div>
-            </CardContent>
-          </Card>
-        )}
+              <span className={`text-2xl font-bold ${(latestCalculation.projectedBalance || 0) >= 0 ? "text-green-600" : "text-red-500"}`}>
+                {(latestCalculation.projectedBalance || 0) >= 0 ? "+" : ""}
+                {formatCurrency(latestCalculation.projectedBalance || 0)}
+              </span>
+            </div>
+          )}
 
-        {/* Scenarios Grid */}
-        {scenarios.length === 0 ? (
-          <Card className="p-12 text-center">
-            <p className="text-muted-foreground mb-4">No scenarios yet</p>
-            <p className="text-sm text-muted-foreground">
-              Click "Create new scenario" to test different financial decisions
-            </p>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {scenarios.map((scenario) => {
-              const status = getScenarioStatus(scenario.projectedBalance);
-              const isBest = bestScenario?.id === scenario.id;
+          {/* No calculation warning */}
+          {!latestCalculation && !loading && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-2xl px-6 py-5 mb-6 text-sm text-yellow-700">
+              {t.scenarios.noCalculation}
+            </div>
+          )}
 
-              // Calculate difference from current projection
-              const baseProjectedBalance = latestCalculation?.projectedBalance || 0;
-              const difference = scenario.projectedBalance - baseProjectedBalance;
-              const isImprovement = difference > 0;
+          {/* Scenarios list */}
+          {loading ? (
+            <p className="text-sm text-muted-foreground">{t.common.loading}</p>
+          ) : scenarios.length === 0 ? (
+            <div className="bg-white border border-dashed border-border rounded-2xl p-12 text-center">
+              <p className="text-muted-foreground mb-1">{t.scenarios.noScenarios}</p>
+              <p className="text-sm text-muted-foreground">{t.scenarios.noScenariosDesc}</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {scenarios.map((scenario) => {
+                const baseBalance = latestCalculation?.projectedBalance || 0;
+                const difference = scenario.projectedBalance - baseBalance;
+                const isImprovement = difference >= 0;
+                const isBest = bestScenario?.id === scenario.id;
 
-              return (
-                <Card
-                  key={scenario.id}
-                  className={`${
-                    scenario.projectedBalance >= 0 ? "bg-green-50" : "bg-red-50"
-                  } border transition-shadow hover:shadow-md`}
-                >
-                  <CardContent className="pt-6 pb-6">
-                    {/* Status Badge */}
-                    <div className="mb-3">
-                      <span
-                        className={`inline-block px-3 py-1 rounded-full text-sm font-medium border ${
-                          isBest
-                            ? "bg-green-100 text-green-700 border-green-200"
-                            : status.color
-                        }`}
-                      >
-                        {isBest ? "Best option" : status.label}
-                      </span>
+                return (
+                  <div key={scenario.id} className="bg-white border border-border rounded-2xl p-5 shadow-sm flex flex-col gap-3">
+                    {/* Title row */}
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="font-bold text-base leading-snug">{scenario.name}</h3>
+                      {isBest && (
+                        <span className="text-xs font-semibold bg-green-50 text-green-600 border border-green-200 px-2 py-0.5 rounded-full whitespace-nowrap">
+                          {t.scenarios.bestOption}
+                        </span>
+                      )}
                     </div>
 
-                    {/* Scenario Name */}
-                    <h3 className="text-xl font-bold mb-4">{scenario.name}</h3>
-
-                    {/* Details */}
-                    <div className="space-y-2 mb-4">
+                    {/* Change details */}
+                    <div className="space-y-1">
                       {scenario.monthlyIncomeChange !== 0 && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <Briefcase className="w-4 h-4" />
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Briefcase className="w-4 h-4 flex-shrink-0" />
                           <span>
-                            {scenario.monthlyIncomeChange > 0 ? "Extra" : "Reduce"}{" "}
-                            {formatCurrency(Math.abs(scenario.monthlyIncomeChange))}/month income
+                            {scenario.monthlyIncomeChange > 0 ? t.scenarios.extra : t.scenarios.reduce}{" "}
+                            <strong className="text-foreground">${Math.abs(scenario.monthlyIncomeChange)}/mo</strong> {t.dashboard.income.toLowerCase()}
                           </span>
                         </div>
                       )}
                       {scenario.monthlyExpenseChange !== 0 && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <DollarSign className="w-4 h-4" />
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <DollarSign className="w-4 h-4 flex-shrink-0" />
                           <span>
-                            {scenario.monthlyExpenseChange > 0 ? "Increase" : "Save"}{" "}
-                            {formatCurrency(Math.abs(scenario.monthlyExpenseChange))}/month
-                            {scenario.monthlyExpenseChange < 0 &&
-                              ` (${formatCurrency(Math.abs(scenario.monthlyExpenseChange) * 12)}/yr)`}
+                            {scenario.monthlyExpenseChange > 0 ? t.scenarios.extra : t.scenarios.save}{" "}
+                            <strong className="text-foreground">${Math.abs(scenario.monthlyExpenseChange)}/mo</strong> {t.dashboard.expenses.toLowerCase()}
+                          </span>
+                        </div>
+                      )}
+                      {scenario.period && scenario.period !== "all" && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Calendar className="w-4 h-4 flex-shrink-0" />
+                          <span>
+                            {t.scenarios.applies} <strong className="text-foreground">{getPeriodLabelTranslated(scenario.period)}</strong>
                           </span>
                         </div>
                       )}
                       {scenario.oneTimeEvent && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <DollarSign className="w-4 h-4" />
-                          <span>
-                            {formatCurrency(scenario.oneTimeEvent.amount)} {scenario.oneTimeEvent.name}
-                          </span>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <DollarSign className="w-4 h-4 flex-shrink-0" />
+                          <span>{formatCurrency(scenario.oneTimeEvent.amount)} {scenario.oneTimeEvent.name}</span>
                         </div>
                       )}
                     </div>
 
-                    {/* Projected Balance with Comparison */}
-                    <div className="bg-white rounded-lg p-4 mb-3">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className="bg-red-500 rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0">
-                            <span className="text-white font-bold text-lg">$</span>
-                          </div>
-                          <div>
-                            <span
-                              className={`text-3xl font-bold ${
-                                scenario.projectedBalance >= 0 ? "text-green-600" : "text-red-600"
-                              }`}
-                            >
-                              {scenario.projectedBalance >= 0 ? "+" : ""}
-                              {formatCurrency(scenario.projectedBalance).replace("$", "")}
-                            </span>
-                            <p className="text-sm text-muted-foreground">At graduation</p>
-                          </div>
-                        </div>
-                      </div>
+                    <div className="border-t border-border" />
 
-                      {/* Comparison Bar */}
-                      <div className={`pt-3 border-t ${isImprovement ? "border-green-200" : "border-red-200"}`}>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">vs. Current plan</span>
-                          <div className="flex items-center gap-1">
-                            {isImprovement ? (
-                              <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                              </svg>
-                            ) : (
-                              <svg className="w-4 h-4 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M14.707 10.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 12.586V5a1 1 0 012 0v7.586l2.293-2.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                              </svg>
-                            )}
-                            <span className={`text-sm font-bold ${isImprovement ? "text-green-600" : "text-red-600"}`}>
-                              {isImprovement ? "+" : ""}{formatCurrency(difference)}
-                            </span>
-                          </div>
+                    {/* Balance box */}
+                    <div className={`rounded-xl p-4 ${scenario.projectedBalance >= 0 ? "bg-green-50" : "bg-red-50"}`}>
+                      <p className={`text-3xl font-bold ${scenario.projectedBalance >= 0 ? "text-green-600" : "text-red-500"}`}>
+                        {scenario.projectedBalance >= 0 ? "" : "-"}
+                        {formatCurrency(Math.abs(scenario.projectedBalance))}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5 mb-3">{t.common.atGraduation}</p>
+                      <div className="border-t border-border/50 pt-2 flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">{t.scenarios.vsCurrentPlan}</span>
+                        <div className="flex items-center gap-1">
+                          {isImprovement
+                            ? <TrendingUp className="w-3.5 h-3.5 text-green-600" />
+                            : <TrendingDown className="w-3.5 h-3.5 text-red-500" />}
+                          <span className={`text-xs font-bold ${isImprovement ? "text-green-600" : "text-red-500"}`}>
+                            {isImprovement ? "+" : ""}{formatCurrency(difference)}
+                          </span>
                         </div>
                       </div>
                     </div>
 
                     {/* Actions */}
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
+                    <div className="flex gap-2 mt-1">
+                      <button
                         onClick={() => handleViewDetails(scenario)}
+                        className="flex-1 text-sm font-medium border border-border rounded-lg py-2 hover:bg-gray-50 transition-colors"
                       >
-                        View details
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
+                        {t.scenarios.viewDetails}
+                      </button>
+                      <button
                         onClick={() => handleDeleteScenario(scenario.id!)}
+                        className="flex-1 text-sm font-medium border border-border rounded-lg py-2 hover:bg-gray-50 transition-colors text-muted-foreground"
                       >
-                        Delete
-                      </Button>
+                        {t.common.delete}
+                      </button>
                     </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </main>
       </div>
 
-      {/* Create Scenario Dialog */}
+      {/* ── Create Dialog ── */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-2xl">Create new scenario</DialogTitle>
+            <DialogTitle className="text-xl font-bold">{t.scenarios.addScenarioTitle}</DialogTitle>
           </DialogHeader>
-
-          <div className="space-y-6 py-4">
-            {/* Scenario Name */}
-            <div>
-              <Label htmlFor="scenario-name" className="text-base font-semibold">
-                Scenario name
-              </Label>
-              <Input
-                id="scenario-name"
-                placeholder="e.g., Work more hours in the summer"
-                value={scenarioName}
-                onChange={(e) => setScenarioName(e.target.value)}
-                className="mt-2"
-              />
-            </div>
-
-            {/* Adjust Income */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <Label className="text-base font-semibold">Adjust income</Label>
-                <span className="text-sm font-medium">
-                  {monthlyIncomeChange >= 0 ? "+" : ""}${monthlyIncomeChange}
-                </span>
-              </div>
-              <p className="text-sm text-muted-foreground mb-3">Monthly income change</p>
-              <Slider
-                value={[monthlyIncomeChange]}
-                onValueChange={(value) => setMonthlyIncomeChange(value[0])}
-                min={-500}
-                max={1000}
-                step={10}
-                className="w-full"
-              />
-            </div>
-
-            {/* Adjust Expense */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <Label className="text-base font-semibold">Adjust expense</Label>
-                <span className="text-sm font-medium">
-                  {monthlyExpenseChange >= 0 ? "+" : ""}${monthlyExpenseChange}
-                </span>
-              </div>
-              <p className="text-sm text-muted-foreground mb-3">Monthly expense change</p>
-              <Slider
-                value={[monthlyExpenseChange]}
-                onValueChange={(value) => setMonthlyExpenseChange(value[0])}
-                min={-500}
-                max={500}
-                step={10}
-                className="w-full"
-              />
-            </div>
-
-            {/* One Time Events */}
-            <div className="border rounded-lg p-4 bg-red-50">
-              <Label className="text-base font-semibold">One time events (optional)</Label>
-
-              <div className="grid grid-cols-3 gap-3 mt-3">
+          <div className="space-y-6 py-2">
+              <div>
+                <Label className="text-sm font-semibold">{t.scenarios.scenarioName}</Label>
                 <Input
-                  placeholder="Event name"
-                  value={oneTimeEventName}
-                  onChange={(e) => setOneTimeEventName(e.target.value)}
+                  placeholder={t.scenarios.scenarioNamePlaceholder}
+                  value={scenarioName}
+                  onChange={(e) => setScenarioName(e.target.value)}
+                  className="mt-2"
                 />
-
-                <Select value={oneTimeEventEffect} onValueChange={(value: "income" | "expense") => setOneTimeEventEffect(value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Effect" />
+              </div>
+              <div>
+                <Label className="text-sm font-semibold">{t.scenarios.whenApplies}</Label>
+                <p className="text-xs text-muted-foreground mt-0.5 mb-2">
+                  {t.scenarios.whenAppliesDesc}
+                </p>
+                <Select value={period} onValueChange={(v) => setPeriod(v as ScenarioPeriod)}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder={t.scenarios.periodAllYear} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="income">Income</SelectItem>
-                    <SelectItem value="expense">Expense</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Select value={oneTimeEventSemester} onValueChange={setOneTimeEventSemester}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Semester" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {semesterOptions.map((semester) => (
-                      <SelectItem key={semester} value={semester}>
-                        {semester}
+                    {PERIOD_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {getPeriodLabelTranslated(opt.value)}
+                        <span className="text-muted-foreground ml-1 text-xs">
+                          ({opt.months} {t.scenarios.monthsPerYear})
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-
-              <div className="mt-3">
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-red-500 text-lg font-bold">
-                    $
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <Label className="text-sm font-semibold">{t.scenarios.adjustMonthlyIncome}</Label>
+                  <span className={`text-sm font-semibold ${monthlyIncomeChange >= 0 ? "text-green-600" : "text-red-500"}`}>
+                    {monthlyIncomeChange >= 0 ? "+" : ""}${monthlyIncomeChange}/mo
                   </span>
-                  <Input
-                    type="number"
-                    placeholder="Amount"
-                    value={oneTimeEventAmount}
-                    onChange={(e) => setOneTimeEventAmount(e.target.value)}
-                    className="pl-8"
-                  />
+                </div>
+                <Slider value={[monthlyIncomeChange]} onValueChange={(v) => setMonthlyIncomeChange(v[0])} min={-500} max={1000} step={10} className="mt-3" />
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <Label className="text-sm font-semibold">{t.scenarios.adjustMonthlyExpenses}</Label>
+                  <span className={`text-sm font-semibold ${monthlyExpenseChange <= 0 ? "text-green-600" : "text-red-500"}`}>
+                    {monthlyExpenseChange >= 0 ? "+" : ""}${monthlyExpenseChange}/mo
+                  </span>
+                </div>
+                <Slider value={[monthlyExpenseChange]} onValueChange={(v) => setMonthlyExpenseChange(v[0])} min={-500} max={500} step={10} className="mt-3" />
+              </div>
+              <div className="border border-border rounded-xl p-4 bg-gray-50">
+                <Label className="text-sm font-semibold">{t.scenarios.oneTimeEvent} <span className="text-muted-foreground font-normal">({t.common.optional})</span></Label>
+                <div className="grid grid-cols-3 gap-3 mt-3">
+                  <Input placeholder={t.scenarios.eventName} value={oneTimeEventName} onChange={(e) => setOneTimeEventName(e.target.value)} />
+                  <Select value={oneTimeEventEffect} onValueChange={(v: "income" | "expense") => setOneTimeEventEffect(v)}>
+                    <SelectTrigger><SelectValue placeholder={t.scenarios.eventType} /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="income">{t.dashboard.income}</SelectItem>
+                      <SelectItem value="expense">{t.dashboard.expense}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={oneTimeEventSemester} onValueChange={setOneTimeEventSemester}>
+                    <SelectTrigger><SelectValue placeholder={t.scenarios.eventSemester} /></SelectTrigger>
+                    <SelectContent>{semesterOptions.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="relative mt-3">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-bold">$</span>
+                  <Input type="number" placeholder={t.scenarios.eventAmount} value={oneTimeEventAmount} onChange={(e) => setOneTimeEventAmount(e.target.value)} className="pl-7" />
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Create Button */}
-          <div className="flex justify-end">
-            <Button
-              onClick={handleCreateScenario}
-              className="bg-red-500 hover:bg-red-600 text-white px-8"
-            >
-              Create
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>{t.common.cancel}</Button>
+            <Button onClick={handleCreateScenario} className="bg-red-500 hover:bg-red-600 text-white px-6">
+              {t.common.create}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Scenario Detail/Edit Dialog */}
+      {/* ── Detail / Edit Dialog ── */}
       <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-2xl">Scenario details</DialogTitle>
+            <DialogTitle className="text-xl font-bold">{t.scenarios.scenarioDetails}</DialogTitle>
           </DialogHeader>
 
           {selectedScenario && (
-            <div className="py-4">
-              {/* Line Chart */}
+            <div className="py-2 space-y-6">
+              {/* Chart */}
+              <div className="bg-gray-50 rounded-xl p-4">
+                <p className="text-sm font-semibold mb-3">{t.scenarios.cashFlowProjection}</p>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={generateChartData(selectedScenario)} margin={{ top: 10, right: 20, left: 50, bottom: 60 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="name" angle={-45} textAnchor="end" height={70} tick={{ fontSize: 11 }} />
+                    <YAxis tickFormatter={(v) => `$${v.toLocaleString()}`} tick={{ fontSize: 11 }} />
+                    <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                    <Legend wrapperStyle={{ paddingTop: 20 }} />
+                    <ReferenceLine y={0} stroke="#d1d5db" strokeDasharray="4 4" />
+                    <Line type="monotone" dataKey="Current" stroke="#9ca3af" strokeWidth={2} name={t.scenarios.currentPlanLine} dot={false} />
+                    <Line type="monotone" dataKey="Scenario" stroke="#ef4444" strokeWidth={2.5} name={t.scenarios.thisScenario} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Edit form */}
               <div>
-                <h3 className="text-lg font-semibold mb-3">Cash flow projection</h3>
-                <div className="bg-accent/5 rounded-lg p-4">
-                  <ResponsiveContainer width="100%" height={400}>
-                    <LineChart data={generateScenarioChartData(selectedScenario)} margin={{ top: 20, right: 30, left: 60, bottom: 80 }}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis
-                        dataKey="name"
-                        label={{ value: 'Semester', position: 'insideBottom', offset: -25, style: { fontSize: 16, fontWeight: 'bold', fill: '#374151' } }}
-                        tick={{ fill: '#374151', fontSize: 12, fontWeight: 600 }}
-                        axisLine={{ stroke: '#374151', strokeWidth: 2 }}
-                        tickLine={{ stroke: '#374151', strokeWidth: 2 }}
-                        angle={-45}
-                        textAnchor="end"
-                        height={80}
-                      />
-                      <YAxis
-                        label={{ value: 'Money ($)', angle: -90, position: 'insideLeft', offset: -30, style: { fontSize: 16, fontWeight: 'bold', fill: '#374151' } }}
-                        tick={{ fill: '#374151', fontSize: 14, fontWeight: 600 }}
-                        axisLine={{ stroke: '#374151', strokeWidth: 2 }}
-                        tickLine={{ stroke: '#374151', strokeWidth: 2 }}
-                        tickFormatter={(value) => `$${value.toLocaleString()}`}
-                      />
-                      <Tooltip
-                        formatter={(value: number) => formatCurrency(value)}
-                        contentStyle={{ backgroundColor: "#fff", border: "1px solid #ccc" }}
-                      />
-                      <Legend wrapperStyle={{ paddingTop: "40px" }} />
-                      <ReferenceLine y={0} stroke="#666" strokeDasharray="3 3" />
-                      <Line
-                        type="monotone"
-                        dataKey="Current"
-                        stroke="#9ca3af"
-                        strokeWidth={2}
-                        name="Current Plan"
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="Scenario"
-                        stroke="#ef4444"
-                        strokeWidth={3}
-                        name="This Scenario"
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+                <p className="text-sm font-semibold mb-4">{t.scenarios.editScenario}</p>
+                <div className="space-y-6 py-2">
+              <div>
+                <Label className="text-sm font-semibold">{t.scenarios.scenarioName}</Label>
+                <Input
+                  placeholder={t.scenarios.scenarioNamePlaceholder}
+                  value={scenarioName}
+                  onChange={(e) => setScenarioName(e.target.value)}
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-semibold">{t.scenarios.whenApplies}</Label>
+                <p className="text-xs text-muted-foreground mt-0.5 mb-2">
+                  {t.scenarios.whenAppliesDesc}
+                </p>
+                <Select value={period} onValueChange={(v) => setPeriod(v as ScenarioPeriod)}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder={t.scenarios.periodAllYear} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PERIOD_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {getPeriodLabelTranslated(opt.value)}
+                        <span className="text-muted-foreground ml-1 text-xs">
+                          ({opt.months} {t.scenarios.monthsPerYear})
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <Label className="text-sm font-semibold">{t.scenarios.adjustMonthlyIncome}</Label>
+                  <span className={`text-sm font-semibold ${monthlyIncomeChange >= 0 ? "text-green-600" : "text-red-500"}`}>
+                    {monthlyIncomeChange >= 0 ? "+" : ""}${monthlyIncomeChange}/mo
+                  </span>
+                </div>
+                <Slider value={[monthlyIncomeChange]} onValueChange={(v) => setMonthlyIncomeChange(v[0])} min={-500} max={1000} step={10} className="mt-3" />
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <Label className="text-sm font-semibold">{t.scenarios.adjustMonthlyExpenses}</Label>
+                  <span className={`text-sm font-semibold ${monthlyExpenseChange <= 0 ? "text-green-600" : "text-red-500"}`}>
+                    {monthlyExpenseChange >= 0 ? "+" : ""}${monthlyExpenseChange}/mo
+                  </span>
+                </div>
+                <Slider value={[monthlyExpenseChange]} onValueChange={(v) => setMonthlyExpenseChange(v[0])} min={-500} max={500} step={10} className="mt-3" />
+              </div>
+              <div className="border border-border rounded-xl p-4 bg-gray-50">
+                <Label className="text-sm font-semibold">{t.scenarios.oneTimeEvent} <span className="text-muted-foreground font-normal">({t.common.optional})</span></Label>
+                <div className="grid grid-cols-3 gap-3 mt-3">
+                  <Input placeholder={t.scenarios.eventName} value={oneTimeEventName} onChange={(e) => setOneTimeEventName(e.target.value)} />
+                  <Select value={oneTimeEventEffect} onValueChange={(v: "income" | "expense") => setOneTimeEventEffect(v)}>
+                    <SelectTrigger><SelectValue placeholder={t.scenarios.eventType} /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="income">{t.dashboard.income}</SelectItem>
+                      <SelectItem value="expense">{t.dashboard.expense}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={oneTimeEventSemester} onValueChange={setOneTimeEventSemester}>
+                    <SelectTrigger><SelectValue placeholder={t.scenarios.eventSemester} /></SelectTrigger>
+                    <SelectContent>{semesterOptions.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="relative mt-3">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-bold">$</span>
+                  <Input type="number" placeholder={t.scenarios.eventAmount} value={oneTimeEventAmount} onChange={(e) => setOneTimeEventAmount(e.target.value)} className="pl-7" />
                 </div>
               </div>
-
-              {/* Edit Form */}
-              <div className="space-y-4 mt-6">
-                <h3 className="text-lg font-semibold">Edit scenario</h3>
-
-                {/* Scenario Name */}
-                <div>
-                  <Label htmlFor="edit-scenario-name" className="text-base font-semibold">
-                    Scenario name
-                  </Label>
-                  <Input
-                    id="edit-scenario-name"
-                    value={scenarioName}
-                    onChange={(e) => setScenarioName(e.target.value)}
-                    className="mt-2"
-                  />
-                </div>
-
-                {/* Adjust Income */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <Label className="text-base font-semibold">Adjust income</Label>
-                    <span className="text-sm font-medium">
-                      {monthlyIncomeChange >= 0 ? "+" : ""}${monthlyIncomeChange}
-                    </span>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-3">Monthly income change</p>
-                  <Slider
-                    value={[monthlyIncomeChange]}
-                    onValueChange={(value) => setMonthlyIncomeChange(value[0])}
-                    min={-500}
-                    max={1000}
-                    step={10}
-                    className="w-full"
-                  />
-                </div>
-
-                {/* Adjust Expense */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <Label className="text-base font-semibold">Adjust expense</Label>
-                    <span className="text-sm font-medium">
-                      {monthlyExpenseChange >= 0 ? "+" : ""}${monthlyExpenseChange}
-                    </span>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-3">Monthly expense change</p>
-                  <Slider
-                    value={[monthlyExpenseChange]}
-                    onValueChange={(value) => setMonthlyExpenseChange(value[0])}
-                    min={-500}
-                    max={500}
-                    step={10}
-                    className="w-full"
-                  />
-                </div>
-
-                {/* One Time Events */}
-                <div className="border rounded-lg p-4 bg-red-50">
-                  <Label className="text-base font-semibold">One time events (optional)</Label>
-
-                  <div className="grid grid-cols-3 gap-3 mt-3">
-                    <Input
-                      placeholder="Event name"
-                      value={oneTimeEventName}
-                      onChange={(e) => setOneTimeEventName(e.target.value)}
-                    />
-
-                    <Select value={oneTimeEventEffect} onValueChange={(value: "income" | "expense") => setOneTimeEventEffect(value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Effect" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="income">Income</SelectItem>
-                        <SelectItem value="expense">Expense</SelectItem>
-                      </SelectContent>
-                    </Select>
-
-                    <Select value={oneTimeEventSemester} onValueChange={setOneTimeEventSemester}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Semester" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {semesterOptions.map((semester) => (
-                          <SelectItem key={semester} value={semester}>
-                            {semester}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="mt-3">
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-red-500 text-lg font-bold">
-                        $
-                      </span>
-                      <Input
-                        type="number"
-                        placeholder="Amount"
-                        value={oneTimeEventAmount}
-                        onChange={(e) => setOneTimeEventAmount(e.target.value)}
-                        className="pl-8"
-                      />
-                    </div>
-                  </div>
-                </div>
+            </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-3 pt-4">
-                <Button
-                  onClick={handleUpdateScenario}
-                  className="flex-1 bg-red-500 hover:bg-red-600 text-white"
-                >
-                  Save changes
+              <div className="flex gap-3 pt-2">
+                <Button onClick={handleUpdateScenario} className="flex-1 bg-red-500 hover:bg-red-600 text-white">
+                  {t.common.saveChanges}
                 </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => handleDeleteScenario(selectedScenario.id!)}
-                  className="flex-1"
-                >
-                  Delete scenario
+                <Button variant="outline" onClick={() => handleDeleteScenario(selectedScenario.id!)} className="flex-1">
+                  {t.scenarios.deleteScenario}
                 </Button>
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
-
-      <Footer />
     </div>
   );
 };

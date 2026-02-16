@@ -1,7 +1,8 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { motion } from "framer-motion";
 import {
   Clock,
@@ -9,7 +10,6 @@ import {
   BadgeDollarSign,
   AlertCircle,
   CheckCircle2,
-  Play,
   ListChecks,
   HeartPulse,
 } from "lucide-react";
@@ -52,7 +52,7 @@ const homeBubbles = [
 ];
 
 const HomeBubbles = () => (
-  <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+  <div className="absolute inset-0 pointer-events-none z-0">
     {homeBubbles.map((b, i) => (
       <motion.div
         key={i}
@@ -75,12 +75,12 @@ const HomeBubbles = () => (
 
 // ─── Mock data for hero chart ───
 const semesterChartData = [
-  { name: "Summer 2025", balance: 2000 },
-  { name: "Fall 2025", balance: -3000 },
-  { name: "Winter 2026", balance: -5500 },
-  { name: "Summer 2026", balance: 8000 },
-  { name: "Fall 2026", balance: 3500 },
-  { name: "Winter 2027", balance: -2000 },
+  { name: "Summer 2025", balance: 1200 },
+  { name: "Fall 2025", balance: -1800 },
+  { name: "Winter 2026", balance: -2100 },
+  { name: "Summer 2026", balance: 4100 },
+  { name: "Fall 2026", balance: 200 },
+  { name: "Winter 2027", balance: -1200 },
 ];
 
 // Calculate the gradient offset so green is above 0 and red is below 0
@@ -128,41 +128,6 @@ const ChartTooltip = ({ active, payload, label }: any) => {
   );
 };
 
-// Floating annotation for the peak data point
-const PeakAnnotation = (props: any) => {
-  const { viewBox } = props;
-  if (!viewBox) return null;
-  const { x, y } = viewBox;
-  return (
-    <g>
-      <foreignObject x={x + 10} y={y - 68} width={165} height={64}>
-        <div
-          style={{
-            background: "white",
-            borderRadius: "8px",
-            border: "1px solid #e5e7eb",
-            padding: "6px 10px",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-            fontSize: "10px",
-            lineHeight: "1.4",
-          }}
-        >
-          <p style={{ fontWeight: 700, marginBottom: 1, color: "#111" }}>Summer 2026</p>
-          <p style={{ color: "#888", margin: 0 }}>
-            Available funds: <span style={{ color: "#22c55e", fontWeight: 600 }}>$8,100</span>
-          </p>
-          <p style={{ color: "#888", margin: 0 }}>
-            Expenses: <span style={{ color: "#ef4444", fontWeight: 600 }}>$6,000</span>
-          </p>
-          <p style={{ color: "#888", margin: 0 }}>
-            Ending balance:{" "}
-            <span style={{ color: "#22c55e", fontWeight: 700 }}>$4,100</span>
-          </p>
-        </div>
-      </foreignObject>
-    </g>
-  );
-};
 
 const semesterCards = [
   { term: "Winter 2026", label: "(Jan-Apr)", balance: -2100, income: 15520, expenses: 15775 },
@@ -205,6 +170,13 @@ const costRows = [
 ];
 
 const Homepage = () => {
+  const { currentUser } = useAuth();
+  const navigate = useNavigate();
+
+  const handleStartPlanning = () => {
+    navigate(currentUser ? "/dashboard" : "/signup");
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col relative">
       <HomeBubbles />
@@ -213,7 +185,7 @@ const Homepage = () => {
       {/* ════════════════════════════════════════════
           HERO SECTION
          ════════════════════════════════════════════ */}
-      <section className="w-full pt-8 pb-6 px-4 relative z-10">
+      <section className="w-full pt-8 pb-12 px-4 relative z-10">
         <div className="max-w-6xl mx-auto text-center">
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight mb-2">
             Know your numbers
@@ -224,12 +196,14 @@ const Homepage = () => {
             Plan each term. Spot shortfalls early. Graduate stress-free.
           </p>
           <div className="flex items-center justify-center gap-3 mb-8">
-            <Link to="/onboarding">
-              <Button className="bg-red-500 hover:bg-red-600 text-white rounded-full px-6 py-5 text-sm font-semibold">
-                Start planning
-              </Button>
-            </Link>
-            <Button variant="outline" className="rounded-full px-6 py-5 text-sm font-semibold">
+            <Button onClick={handleStartPlanning} className="bg-red-500 hover:bg-red-600 text-white rounded-full px-6 py-5 text-sm font-semibold">
+              Start planning
+            </Button>
+            <Button
+              variant="outline"
+              className="rounded-full px-6 py-5 text-sm font-semibold"
+              onClick={() => document.getElementById("demo-video")?.scrollIntoView({ behavior: "smooth" })}
+            >
               Watch demo
             </Button>
           </div>
@@ -237,62 +211,62 @@ const Homepage = () => {
           {/* Hero visual — chart + semester cards */}
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-stretch">
             {/* Chart */}
-            <div className="lg:col-span-3 bg-white rounded-2xl border border-border p-4 shadow-md flex flex-col overflow-hidden">
-              <ResponsiveContainer width="100%" height={280}>
-                <AreaChart data={semesterChartData} margin={{ top: 70, right: 20, left: 5, bottom: 5 }}>
-                  <defs>
-                    {/* Fill: green above zero, red below zero */}
-                    <linearGradient id="splitFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#22c55e" stopOpacity={0.35} />
-                      <stop offset={gradientOffset} stopColor="#22c55e" stopOpacity={0.06} />
-                      <stop offset={gradientOffset} stopColor="#ef4444" stopOpacity={0.06} />
-                      <stop offset="100%" stopColor="#ef4444" stopOpacity={0.3} />
-                    </linearGradient>
-                    {/* Stroke: green above zero, red below zero */}
-                    <linearGradient id="splitStroke" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#22c55e" />
-                      <stop offset={gradientOffset} stopColor="#16a34a" />
-                      <stop offset={gradientOffset} stopColor="#ef4444" />
-                      <stop offset="100%" stopColor="#dc2626" />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                  <XAxis
-                    dataKey="name"
-                    tick={{ fontSize: 11, fill: "#9ca3af" }}
-                    axisLine={{ stroke: "#e5e7eb" }}
-                    tickLine={false}
-                    dy={8}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 11, fill: "#9ca3af" }}
-                    axisLine={false}
-                    tickLine={false}
-                    tickFormatter={(v) => `$${v.toLocaleString()}`}
-                    width={72}
-                  />
-                  <Tooltip content={<ChartTooltip />} cursor={{ stroke: "#d1d5db", strokeDasharray: "4 4" }} />
-                  <ReferenceLine y={0} stroke="#d1d5db" strokeWidth={1.5} />
-                  <ReferenceLine
-                    x="Summer 2026"
-                    stroke="#22c55e"
-                    strokeDasharray="4 4"
-                    strokeOpacity={0.5}
-                    label={<PeakAnnotation />}
-                  />
-                  <Area
-                    type="natural"
-                    dataKey="balance"
-                    stroke="url(#splitStroke)"
-                    strokeWidth={3}
-                    fill="url(#splitFill)"
-                    dot={renderDot}
-                    activeDot={{ r: 8, fill: "#fff", strokeWidth: 3 }}
-                    animationDuration={1500}
-                    animationEasing="ease-out"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+            <div className="lg:col-span-3 bg-white rounded-2xl border border-border p-4 pb-8 shadow-md flex flex-col">
+              <ResponsiveContainer width="100%" height={360}>
+                  <AreaChart data={semesterChartData} margin={{ top: 10, right: 20, left: 5, bottom: 60 }} style={{ overflow: "visible" }}>
+                    <defs>
+                      {/* Fill: green above zero, red below zero */}
+                      <linearGradient id="splitFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#22c55e" stopOpacity={0.35} />
+                        <stop offset={gradientOffset} stopColor="#22c55e" stopOpacity={0.06} />
+                        <stop offset={gradientOffset} stopColor="#ef4444" stopOpacity={0.06} />
+                        <stop offset="100%" stopColor="#ef4444" stopOpacity={0.3} />
+                      </linearGradient>
+                      {/* Stroke: green above zero, red below zero */}
+                      <linearGradient id="splitStroke" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#22c55e" />
+                        <stop offset={gradientOffset} stopColor="#16a34a" />
+                        <stop offset={gradientOffset} stopColor="#ef4444" />
+                        <stop offset="100%" stopColor="#dc2626" />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                    <XAxis
+                      dataKey="name"
+                      tick={{ fontSize: 11, fill: "#9ca3af" }}
+                      axisLine={{ stroke: "#e5e7eb" }}
+                      tickLine={false}
+                      dy={8}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11, fill: "#9ca3af" }}
+                      axisLine={false}
+                      tickLine={false}
+                      tickFormatter={(v) => `$${v.toLocaleString()}`}
+                      width={72}
+                      padding={{ top: 20, bottom: 20 }}
+                    />
+                    <Tooltip content={<ChartTooltip />} cursor={{ stroke: "#d1d5db", strokeDasharray: "4 4" }} />
+                    <ReferenceLine y={0} stroke="#d1d5db" strokeWidth={1.5} />
+                    <ReferenceLine
+                      x="Summer 2026"
+                      stroke="#22c55e"
+                      strokeDasharray="4 4"
+                      strokeOpacity={0.5}
+                    />
+                    <Area
+                      type="natural"
+                      dataKey="balance"
+                      stroke="url(#splitStroke)"
+                      strokeWidth={3}
+                      fill="url(#splitFill)"
+                      dot={renderDot}
+                      activeDot={{ r: 8, fill: "#fff", strokeWidth: 3 }}
+                      animationDuration={1500}
+                      animationEasing="ease-out"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
               <p className="text-xs text-muted-foreground text-center mt-1 tracking-wide">Semesters</p>
             </div>
 
@@ -435,11 +409,9 @@ const Homepage = () => {
               <CheckCircle2 className="w-6 h-6 text-green-500 flex-shrink-0 mt-0.5" />
               <p className="text-base">Adjust anytime as things change</p>
             </div>
-            <Link to="/onboarding">
-              <Button className="bg-red-500 hover:bg-red-600 text-white rounded-full px-8 py-6 text-base font-semibold mt-4">
-                Start planning
-              </Button>
-            </Link>
+            <Button onClick={handleStartPlanning} className="bg-red-500 hover:bg-red-600 text-white rounded-full px-8 py-6 text-base font-semibold mt-4">
+              Start planning
+            </Button>
           </div>
         </div>
       </section>
@@ -473,11 +445,9 @@ const Homepage = () => {
                 <p className="text-base">{text}</p>
               </div>
             ))}
-            <Link to="/onboarding">
-              <Button className="bg-red-500 hover:bg-red-600 text-white rounded-full px-8 py-6 text-base font-semibold mt-4">
-                Start planning
-              </Button>
-            </Link>
+            <Button onClick={handleStartPlanning} className="bg-red-500 hover:bg-red-600 text-white rounded-full px-8 py-6 text-base font-semibold mt-4">
+              Start planning
+            </Button>
           </div>
 
           {/* Right — scenario cards mockup */}
@@ -608,11 +578,9 @@ const Homepage = () => {
               <CheckCircle2 className="w-6 h-6 text-green-500 flex-shrink-0 mt-0.5" />
               <p className="text-base">Actionable insights for each term</p>
             </div>
-            <Link to="/onboarding">
-              <Button className="bg-red-500 hover:bg-red-600 text-white rounded-full px-8 py-6 text-base font-semibold mt-4">
-                Start planning
-              </Button>
-            </Link>
+            <Button onClick={handleStartPlanning} className="bg-red-500 hover:bg-red-600 text-white rounded-full px-8 py-6 text-base font-semibold mt-4">
+              Start planning
+            </Button>
           </div>
         </div>
       </section>
@@ -620,7 +588,7 @@ const Homepage = () => {
       {/* ════════════════════════════════════════════
           SEE BUDGETLY IN ACTION
          ════════════════════════════════════════════ */}
-      <section className="w-full py-20 px-4 bg-gray-50/60 relative z-10">
+      <section id="demo-video" className="w-full py-20 px-4 bg-gray-50/60 relative z-10">
         <div className="max-w-4xl mx-auto text-center mb-10">
           <h2 className="text-3xl md:text-4xl font-bold mb-3">See Budgetly in Action</h2>
           <p className="text-muted-foreground text-lg">
@@ -630,10 +598,14 @@ const Homepage = () => {
         </div>
 
         <div className="max-w-3xl mx-auto">
-          <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800 aspect-video flex items-center justify-center shadow-xl">
-            <button className="w-20 h-20 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors shadow-lg">
-              <Play className="w-8 h-8 text-white ml-1" fill="white" />
-            </button>
+          <div className="relative rounded-2xl overflow-hidden shadow-xl aspect-video">
+            <iframe
+              className="w-full h-full"
+              src="https://www.youtube.com/embed/bwLlJI63yGA"
+              title="Budgetly Demo"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
           </div>
         </div>
       </section>
