@@ -70,7 +70,7 @@ service cloud.firestore {
       // Users can only create calculations for themselves
       allow create: if isAuthenticated() &&
                       hasValidUserId() &&
-                      request.resource.data.keys().hasAll(['userId', 'semestersLeft', 'tuition']);
+                      request.resource.data.keys().hasAll(['userId', 'tuition', 'remainingSemesters']);
 
       // Users can only update/delete their own calculations
       allow update, delete: if isOwner(resource.data.userId);
@@ -89,6 +89,22 @@ service cloud.firestore {
                       request.resource.data.keys().hasAll(['userId', 'name', 'monthlyIncomeChange', 'monthlyExpenseChange']);
 
       // Users can only update/delete their own scenarios
+      allow update, delete: if isOwner(resource.data.userId);
+    }
+
+    // ============================================================
+    // TRANSACTIONS COLLECTION
+    // ============================================================
+    match /transactions/{transactionId} {
+      // Users can read their own transactions, admins can read all
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+
+      // Users can only create transactions for themselves
+      allow create: if isAuthenticated() &&
+                      hasValidUserId() &&
+                      request.resource.data.keys().hasAll(['userId', 'name', 'amount', 'date', 'type', 'category']);
+
+      // Users can only update/delete their own transactions
       allow update, delete: if isOwner(resource.data.userId);
     }
 

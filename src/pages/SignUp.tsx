@@ -11,6 +11,42 @@ import { toast } from "sonner";
 import logo from "@/assets/logo.png";
 import { Link } from "react-router-dom";
 import Footer from "@/components/Footer";
+import { motion } from "framer-motion";
+
+const authBubbles = [
+  { size: 40, x: "5%",  y: "8%",  color: "bg-red-300/25", dur: 10, dx: 25,  dy: 18  },
+  { size: 18, x: "20%", y: "4%",  color: "bg-red-200/30", dur: 7,  dx: -15, dy: 22  },
+  { size: 55, x: "40%", y: "2%",  color: "bg-red-400/20", dur: 13, dx: 12,  dy: -14 },
+  { size: 22, x: "65%", y: "6%",  color: "bg-red-300/28", dur: 8,  dx: -20, dy: 16  },
+  { size: 35, x: "82%", y: "3%",  color: "bg-red-200/25", dur: 11, dx: 18,  dy: 20  },
+  { size: 14, x: "92%", y: "18%", color: "bg-red-300/30", dur: 6,  dx: -12, dy: -18 },
+  { size: 28, x: "96%", y: "45%", color: "bg-red-200/22", dur: 9,  dx: -16, dy: 14  },
+  { size: 16, x: "93%", y: "70%", color: "bg-red-300/28", dur: 8,  dx: 14,  dy: -20 },
+  { size: 44, x: "88%", y: "88%", color: "bg-red-400/18", dur: 12, dx: -10, dy: -16 },
+  { size: 20, x: "55%", y: "92%", color: "bg-red-200/30", dur: 9,  dx: 18,  dy: -12 },
+  { size: 30, x: "30%", y: "90%", color: "bg-red-300/22", dur: 11, dx: -14, dy: -18 },
+  { size: 12, x: "10%", y: "88%", color: "bg-red-200/28", dur: 7,  dx: 20,  dy: -14 },
+  { size: 24, x: "3%",  y: "60%", color: "bg-red-300/25", dur: 10, dx: 16,  dy: 12  },
+  { size: 10, x: "6%",  y: "35%", color: "bg-red-200/32", dur: 6,  dx: -18, dy: 20  },
+];
+
+const AuthBubbles = () => (
+  <div className="absolute inset-0 overflow-hidden pointer-events-none">
+    {authBubbles.map((b, i) => (
+      <motion.div
+        key={i}
+        className={`absolute rounded-full ${b.color}`}
+        style={{ width: b.size, height: b.size, left: b.x, top: b.y }}
+        animate={{
+          x: [0, b.dx, -b.dx * 0.5, b.dx * 0.3, 0],
+          y: [0, b.dy, -b.dy * 0.6, b.dy * 0.4, 0],
+          scale: [1, 1.1, 0.92, 1.05, 1],
+        }}
+        transition={{ duration: b.dur, repeat: Infinity, ease: "easeInOut" }}
+      />
+    ))}
+  </div>
+);
 
 const SignUp = () => {
   const [firstName, setFirstName] = useState("");
@@ -41,13 +77,10 @@ const SignUp = () => {
       const displayName = `${firstName} ${lastName}`;
       await signUpWithEmail(email, password, displayName);
 
-      // Store email for the verification page
-      localStorage.setItem("pendingVerificationEmail", email);
+      toast.success("Account created! Let's set up your plan.");
 
-      toast.success("Account created! Please check your email to verify your account.");
-
-      // Redirect to verification page
-      navigate("/verify-email");
+      // Go straight to onboarding — verification happens after
+      navigate("/onboarding");
     } catch (error: any) {
       toast.error(error.message || "Failed to create account");
     } finally {
@@ -60,7 +93,7 @@ const SignUp = () => {
     try {
       await signInWithGoogle();
       toast.success("Successfully signed up with Google!");
-      navigate("/");
+      navigate("/onboarding");
     } catch (error: any) {
       toast.error(error.message || "Failed to sign up with Google");
     } finally {
@@ -69,8 +102,9 @@ const SignUp = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-background to-muted">
-      <div className="flex-grow flex items-center justify-center p-4">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-background to-muted relative overflow-hidden">
+      <AuthBubbles />
+      <div className="flex-grow flex items-center justify-center p-4 relative z-10">
         <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 flex flex-col items-center">
           <Link to="/" className="mb-4">
@@ -211,7 +245,7 @@ const SignUp = () => {
         </CardContent>
       </Card>
       </div>
-      <Footer />
+      <div className="relative z-10"><Footer /></div>
     </div>
   );
 };
