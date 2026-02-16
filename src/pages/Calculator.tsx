@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
+import BottomNav from "@/components/BottomNav";
 import CalculatorFormImproved from "@/components/CalculatorFormImproved";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -75,10 +76,11 @@ const Calculator = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
+      <BottomNav />
 
       <div className="flex flex-1">
         {/* ── Left Sidebar ── */}
-        <aside className={`border-r border-border bg-white flex flex-col items-center py-4 gap-2 sticky top-[57px] h-[calc(100vh-57px)] flex-shrink-0 transition-all duration-200 ${sidebarExpanded ? "w-48 px-3" : "w-16"}`}>
+        <aside className={`hidden lg:flex border-r border-border bg-white flex-col items-center py-4 gap-2 sticky top-[57px] h-[calc(100vh-57px)] flex-shrink-0 transition-all duration-200 ${sidebarExpanded ? "w-48 px-3" : "w-16"}`}>
           {/* Expand toggle — top */}
           <button
             onClick={() => setSidebarExpanded(!sidebarExpanded)}
