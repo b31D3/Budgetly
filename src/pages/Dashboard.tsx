@@ -62,41 +62,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-
-/* ─────────────────────────────────────────────
-   Helper: sidebar icon button
-   ───────────────────────────────────────────── */
-const SidebarIcon = ({
-  icon: Icon,
-  label,
-  active,
-  expanded,
-  onClick,
-}: {
-  icon: any;
-  label: string;
-  active?: boolean;
-  expanded?: boolean;
-  onClick?: () => void;
-}) => (
-  <button
-    onClick={onClick}
-    className={`flex items-center gap-3 rounded-xl transition-all ${
-      expanded ? "w-full px-3 py-2.5" : "w-11 h-11 justify-center"
-    } ${
-      active
-        ? "bg-red-100 text-red-500 shadow-sm"
-        : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-    }`}
-  >
-    <Icon className="w-5 h-5 flex-shrink-0" />
-    {expanded && (
-      <span className={`text-sm font-medium whitespace-nowrap ${active ? "text-red-500" : "text-foreground"}`}>
-        {label}
-      </span>
-    )}
-  </button>
-);
+import SidebarIcon from "@/components/SidebarIcon";
 
 /* ─────────────────────────────────────────────
    Helper: custom chart tooltip
@@ -217,6 +183,10 @@ const Dashboard = () => {
     "all" | "expenses" | "income"
   >("all");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() };
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -250,23 +220,47 @@ const Dashboard = () => {
       maximumFractionDigits: 0,
     }).format(value);
 
+  /* ── Month navigation ── */
+  const navigateMonth = (direction: "prev" | "next") => {
+    setSelectedMonth((prev) => {
+      let month = prev.month + (direction === "next" ? 1 : -1);
+      let year = prev.year;
+      if (month > 11) { month = 0; year++; }
+      if (month < 0) { month = 11; year--; }
+      return { year, month };
+    });
+  };
+
+  const selectedMonthLabel = new Date(selectedMonth.year, selectedMonth.month)
+    .toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
+  const isCurrentMonth = (() => {
+    const now = new Date();
+    return selectedMonth.year === now.getFullYear() && selectedMonth.month === now.getMonth();
+  })();
+
   /* ── Transaction helpers ── */
-  const totalIncome = transactions
+  const monthTransactions = transactions.filter((t) => {
+    const [year, month] = t.date.split("-").map(Number);
+    return year === selectedMonth.year && month - 1 === selectedMonth.month;
+  });
+
+  const totalIncome = monthTransactions
     .filter((t) => t.type === "income")
     .reduce((sum, t) => sum + t.amount, 0);
-  const totalExpenses = transactions
+  const totalExpenses = monthTransactions
     .filter((t) => t.type === "expense")
     .reduce((sum, t) => sum + t.amount, 0);
   const netAmount = totalIncome - totalExpenses;
 
-  const spendingByCategory = transactions
+  const spendingByCategory = monthTransactions
     .filter((t) => t.type === "expense")
     .reduce((acc, t) => {
       acc[t.category] = (acc[t.category] || 0) + t.amount;
       return acc;
     }, {} as Record<string, number>);
 
-  const filteredTransactions = transactions
+  const filteredTransactions = monthTransactions
     .filter((t) => {
       if (transactionFilter === "all") return true;
       if (transactionFilter === "expenses") return t.type === "expense";
@@ -1309,12 +1303,43 @@ const Dashboard = () => {
                 </Button>
               </div>
 
+              {/* Month navigation */}
+              <div className="flex items-center gap-3 mb-5">
+                <button
+                  onClick={() => navigateMonth("prev")}
+                  className="w-8 h-8 rounded-full flex items-center justify-center bg-white border border-border hover:bg-gray-100 transition-colors"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="font-semibold text-base min-w-[150px] text-center">
+                  {selectedMonthLabel}
+                </span>
+                <button
+                  onClick={() => navigateMonth("next")}
+                  disabled={isCurrentMonth}
+                  className="w-8 h-8 rounded-full flex items-center justify-center bg-white border border-border hover:bg-gray-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+                {!isCurrentMonth && (
+                  <button
+                    onClick={() => {
+                      const now = new Date();
+                      setSelectedMonth({ year: now.getFullYear(), month: now.getMonth() });
+                    }}
+                    className="text-xs font-semibold text-red-500 hover:underline ml-1"
+                  >
+                    Back to today
+                  </button>
+                )}
+              </div>
+
               {/* Summary Cards - Row 1 */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <Card className="bg-green-50 border-green-100">
                   <CardContent className="pt-4 pb-4">
                     <p className="text-xs font-medium text-muted-foreground mb-1">
-                      Income this month
+                      Income — {selectedMonthLabel}
                     </p>
                     <div className="flex items-center gap-2">
                       <span className="text-green-600 text-2xl">$</span>
@@ -1327,7 +1352,7 @@ const Dashboard = () => {
                 <Card className="bg-red-50 border-red-100">
                   <CardContent className="pt-4 pb-4">
                     <p className="text-xs font-medium text-muted-foreground mb-1">
-                      Expense this month
+                      Expenses — {selectedMonthLabel}
                     </p>
                     <div className="flex items-center gap-2">
                       <span className="text-red-600 text-2xl">$</span>
@@ -1379,11 +1404,8 @@ const Dashboard = () => {
                     <CardContent className="pt-4">
                       <div className="bg-green-50 rounded-lg p-4">
                         <p className="text-lg font-bold mb-4">
-                          {new Date().toLocaleDateString("en-US", {
-                            month: "long",
-                            year: "numeric",
-                          })}{" "}
-                          (this month)
+                          {selectedMonthLabel}{" "}
+                          {isCurrentMonth && "(this month)"}
                         </p>
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
@@ -1434,11 +1456,8 @@ const Dashboard = () => {
                     <CardContent className="pt-4">
                       <div className="bg-red-50 rounded-lg p-4">
                         <p className="text-lg font-bold mb-4">
-                          {new Date().toLocaleDateString("en-US", {
-                            month: "long",
-                            year: "numeric",
-                          })}{" "}
-                          (this month)
+                          {selectedMonthLabel}{" "}
+                          {isCurrentMonth && "(this month)"}
                         </p>
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">

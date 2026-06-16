@@ -1,11 +1,18 @@
-import { db } from "@/lib/firebase";
-import { collection, addDoc, getDocs, query, where, deleteDoc, doc, Timestamp } from "firebase/firestore";
+import { db } from "../lib/firebase";
+import {
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  where,
+  deleteDoc,
+  doc,
+  Timestamp,
+} from "firebase/firestore";
 
 export interface CalculationData {
   id?: string;
   userId: string;
-
-  // Calculated values
   tuition: number;
   creditsPerSemester: number;
   semestersPerYear: number;
@@ -22,8 +29,6 @@ export interface CalculationData {
   remainingSemesters: number;
   projectedBalance: number;
   semesterData?: any[];
-
-  // Raw form inputs — needed to restore the form
   formInputs?: {
     studentType?: string;
     semestersLeft?: string;
@@ -45,13 +50,14 @@ export interface CalculationData {
     grant?: string;
     savings?: string;
   };
-
   createdAt: Date;
 }
 
 const COLLECTION_NAME = "calculations";
 
-export const saveCalculation = async (data: Omit<CalculationData, "id" | "createdAt">): Promise<string> => {
+export const saveCalculation = async (
+  data: Omit<CalculationData, "id" | "createdAt">
+): Promise<string> => {
   const docRef = await addDoc(collection(db, COLLECTION_NAME), {
     ...data,
     createdAt: Timestamp.now(),
@@ -59,16 +65,16 @@ export const saveCalculation = async (data: Omit<CalculationData, "id" | "create
   return docRef.id;
 };
 
-export const getUserCalculations = async (userId: string): Promise<CalculationData[]> => {
+export const getUserCalculations = async (
+  userId: string
+): Promise<CalculationData[]> => {
   const q = query(collection(db, COLLECTION_NAME), where("userId", "==", userId));
-  const querySnapshot = await getDocs(q);
-
-  const calculations: CalculationData[] = querySnapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-    createdAt: doc.data().createdAt.toDate(),
+  const snapshot = await getDocs(q);
+  const calculations: CalculationData[] = snapshot.docs.map((d) => ({
+    id: d.id,
+    ...d.data(),
+    createdAt: d.data().createdAt.toDate(),
   })) as CalculationData[];
-
   return calculations.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 };
 
@@ -76,7 +82,9 @@ export const deleteCalculation = async (calculationId: string): Promise<void> =>
   await deleteDoc(doc(db, COLLECTION_NAME, calculationId));
 };
 
-export const getLatestCalculation = async (userId: string): Promise<CalculationData | null> => {
+export const getLatestCalculation = async (
+  userId: string
+): Promise<CalculationData | null> => {
   const calculations = await getUserCalculations(userId);
   return calculations.length > 0 ? calculations[0] : null;
 };

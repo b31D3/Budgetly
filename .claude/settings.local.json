@@ -16,7 +16,27 @@
       "Bash(npm ls:*)",
       "Bash(npm install:*)",
       "Bash(dir:*)",
-      "Bash(firebase --version:*)"
+      "Bash(firebase --version:*)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(node -e \"const p = require\\(''./package.json''\\); console.log\\(''victory-native:'', p.dependencies[''victory-native'']\\); console.log\\(''react-native-svg:'', p.dependencies[''react-native-svg'']\\)\")",
+      "Bash(ls c:/Users/beide/OneDrive/Desktop/Budgetly/.env*)",
+      "Bash(node -e \"const p = require\\(''./package.json''\\); console.log\\(''expo:'', p.dependencies.expo\\)\")",
+      "Bash(npx expo install --fix)",
+      "Bash(npx expo start --clear)",
+      "Bash(netstat -ano)",
+      "Bash(findstr :8081)",
+      "Bash(taskkill /PID 22228 /F)",
+      "Bash(cmd /c \"taskkill /PID 22228 /F\")",
+      "Bash(npx expo start --clear --port 8082)",
+      "Bash(ls \"c:/Users/beide/OneDrive/Desktop/Budgetly/mobile/app/\\(tabs\\)/\")",
+      "Bash(ls \"c:/Users/beide/OneDrive/Desktop/Budgetly/mobile/app/\\(auth\\)/\")",
+      "Bash(cat \"c:/Users/beide/OneDrive/Desktop/Budgetly/mobile/app/\\(auth\\)/sign-in.tsx\")",
+      "Bash(cat \"c:/Users/beide/OneDrive/Desktop/Budgetly/mobile/app/\\(tabs\\)/_layout.tsx\")",
+      "Bash(cat \"c:/Users/beide/OneDrive/Desktop/Budgetly/mobile/app/\\(tabs\\)/index.tsx\")",
+      "Bash(ls /c/Users/beide/OneDrive/Desktop/Budgetly/mobile/app/'\\(tabs\\)'/)",
+      "Bash(head -30 /c/Users/beide/OneDrive/Desktop/Budgetly/mobile/app/'\\(tabs\\)'/index.tsx)",
+      "Bash(ls /c/Users/beide/OneDrive/Desktop/Budgetly/mobile/app/'\\(auth\\)'/)"
     ]
   }
 }
