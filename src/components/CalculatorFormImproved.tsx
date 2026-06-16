@@ -478,7 +478,7 @@ const CalculatorFormImproved = ({ editMode = false }: CalculatorFormImprovedProp
                       onValueChange={(value) => setValue("semestersLeft", value)}
                     >
                       <SelectTrigger id="semestersLeft" aria-label="Select number of semesters">
-                        <SelectValue placeholder="Select......" />
+                        <SelectValue placeholder="Select semesters" />
                       </SelectTrigger>
                       <SelectContent>
                         {["1", "2", "3", "4", "5", "6", "7", "8"].map((num) => (
@@ -603,7 +603,7 @@ const CalculatorFormImproved = ({ editMode = false }: CalculatorFormImprovedProp
                         onValueChange={(value) => setValue("housing", value as "" | "on-campus" | "off-campus")}
                       >
                         <SelectTrigger id="housing" aria-label="Select housing location">
-                          <SelectValue placeholder="Select......" />
+                          <SelectValue placeholder="Select housing type" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="on-campus">On-campus</SelectItem>
@@ -1098,6 +1098,9 @@ const CalculatorFormImproved = ({ editMode = false }: CalculatorFormImprovedProp
                               availableFunds: s.availableFunds,
                               expenses: s.costs,
                               balance: s.balance,
+                              savingsIn: s.savings,
+                              workIncome: s.income,
+                              aidIncome: s.aid,
                             }))}
                             margin={{ top: 20, right: 15, left: 5, bottom: 70 }}
                           >
@@ -1121,24 +1124,30 @@ const CalculatorFormImproved = ({ editMode = false }: CalculatorFormImprovedProp
                               width={70}
                             />
                           <Tooltip
-                            formatter={(value: any, name: string) => {
-                              const formattedValue = `$${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-                              let label = name;
-                              if (name === 'availableFunds') label = 'Available Funds';
-                              if (name === 'expenses') label = 'Expenses';
-                              if (name === 'balance') label = 'Ending Balance';
-                              return [formattedValue, label];
+                            content={({ active, payload, label }) => {
+                              if (!active || !payload || !payload.length) return null;
+                              const d = payload[0]?.payload;
+                              const fmt = (v: number) => `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                              const nameMap: Record<string, string> = { availableFunds: 'Available Funds', expenses: 'Expenses', balance: 'Ending Balance' };
+                              const colorMap: Record<string, string> = { availableFunds: '#10b981', expenses: '#ef4444', balance: '#3b82f6' };
+                              return (
+                                <div style={{ backgroundColor: "#ffffff", border: "3px solid #3b82f6", borderRadius: "12px", padding: "12px 16px", boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)", fontSize: "14px", fontWeight: 600 }}>
+                                  <p style={{ fontWeight: 'bold', marginBottom: '8px', color: '#1f2937', fontSize: '15px' }}>{label}</p>
+                                  {payload.map((entry: any) => (
+                                    <div key={entry.dataKey} style={{ marginBottom: '4px' }}>
+                                      <span style={{ color: colorMap[entry.dataKey] || entry.color }}>● {nameMap[entry.dataKey] || entry.dataKey}: {fmt(entry.value)}</span>
+                                      {entry.dataKey === 'availableFunds' && (
+                                        <div style={{ paddingLeft: '14px', fontSize: '12px', color: '#6b7280', marginTop: '4px', lineHeight: '1.6' }}>
+                                          <div>├ Savings carried in: {fmt(d.savingsIn)}</div>
+                                          <div>├ Work income: {fmt(d.workIncome)}</div>
+                                          <div>└ Financial aid: {fmt(d.aidIncome)}</div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              );
                             }}
-                            contentStyle={{
-                              backgroundColor: "#ffffff",
-                              border: "3px solid #3b82f6",
-                              borderRadius: "12px",
-                              padding: "12px 16px",
-                              boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
-                              fontSize: "14px",
-                              fontWeight: 600
-                            }}
-                            labelStyle={{ fontWeight: 'bold', marginBottom: '6px', color: '#1f2937', fontSize: '15px' }}
                           />
                           <Legend
                             verticalAlign="top"
@@ -1251,6 +1260,9 @@ const CalculatorFormImproved = ({ editMode = false }: CalculatorFormImprovedProp
                                 availableFunds: s.availableFunds,
                                 expenses: s.costs,
                                 balance: s.balance,
+                                savingsIn: s.savings,
+                                workIncome: s.income,
+                                aidIncome: s.aid,
                               }))}
                               margin={{ top: 20, right: 20, left: 10, bottom: 70 }}
                             >
@@ -1274,24 +1286,30 @@ const CalculatorFormImproved = ({ editMode = false }: CalculatorFormImprovedProp
                                 width={70}
                               />
                               <Tooltip
-                                formatter={(value: any, name: string) => {
-                                  const formattedValue = `$${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-                                  let label = name;
-                                  if (name === 'availableFunds') label = 'Available Funds';
-                                  if (name === 'expenses') label = 'Expenses';
-                                  if (name === 'balance') label = 'Ending Balance';
-                                  return [formattedValue, label];
+                                content={({ active, payload, label }) => {
+                                  if (!active || !payload || !payload.length) return null;
+                                  const d = payload[0]?.payload;
+                                  const fmt = (v: number) => `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                                  const nameMap: Record<string, string> = { availableFunds: 'Available Funds', expenses: 'Expenses', balance: 'Ending Balance' };
+                                  const colorMap: Record<string, string> = { availableFunds: '#10b981', expenses: '#ef4444', balance: '#3b82f6' };
+                                  return (
+                                    <div style={{ backgroundColor: "#ffffff", border: "3px solid #3b82f6", borderRadius: "12px", padding: "12px 16px", boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)", fontSize: "14px", fontWeight: 600 }}>
+                                      <p style={{ fontWeight: 'bold', marginBottom: '8px', color: '#1f2937', fontSize: '15px' }}>{label}</p>
+                                      {payload.map((entry: any) => (
+                                        <div key={entry.dataKey} style={{ marginBottom: '4px' }}>
+                                          <span style={{ color: colorMap[entry.dataKey] || entry.color }}>● {nameMap[entry.dataKey] || entry.dataKey}: {fmt(entry.value)}</span>
+                                          {entry.dataKey === 'availableFunds' && (
+                                            <div style={{ paddingLeft: '14px', fontSize: '12px', color: '#6b7280', marginTop: '4px', lineHeight: '1.6' }}>
+                                              <div>├ Savings carried in: {fmt(d.savingsIn)}</div>
+                                              <div>├ Work income: {fmt(d.workIncome)}</div>
+                                              <div>└ Financial aid: {fmt(d.aidIncome)}</div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  );
                                 }}
-                                contentStyle={{
-                                  backgroundColor: "#ffffff",
-                                  border: "3px solid #3b82f6",
-                                  borderRadius: "12px",
-                                  padding: "12px 16px",
-                                  boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
-                                  fontSize: "14px",
-                                  fontWeight: 600
-                                }}
-                                labelStyle={{ fontWeight: 'bold', marginBottom: '6px', color: '#1f2937', fontSize: '15px' }}
                               />
                               <Legend
                                 verticalAlign="top"
