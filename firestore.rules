@@ -109,6 +109,48 @@ service cloud.firestore {
     }
 
     // ============================================================
+    // GIVEAWAY ENTRIES COLLECTION
+    // ============================================================
+    match /giveawayEntries/{entryId} {
+      // Public visitors can submit entries but cannot read or modify stored contest data
+      allow create: if request.resource.data.keys().hasAll([
+        'entryId',
+        'contestId',
+        'normalizedEmail',
+        'emailHash',
+        'eligibilityDeclaration',
+        'eligibilityConfirmed',
+        'rulesAccepted',
+        'acceptedContestRulesVersion',
+        'marketingConsent',
+        'entryValidationStatus',
+        'submittedAt'
+      ]) &&
+      request.resource.data.contestId == 'budgetly-student-giveaway' &&
+      request.resource.data.normalizedEmail is string &&
+      request.resource.data.normalizedEmail.size() > 0 &&
+      request.resource.data.normalizedEmail.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$') &&
+      request.resource.data.entryValidationStatus == 'accepted' &&
+      request.resource.data.eligibilityConfirmed == true &&
+      request.resource.data.rulesAccepted == true &&
+      request.resource.data.acceptedContestRulesVersion is string &&
+      request.resource.data.submittedAt is timestamp &&
+      request.resource.data.entryId is string &&
+      request.resource.data.emailHash is string;
+
+      // Only admins can read, update, or delete giveaway entries
+      allow read, update, delete: if isAdmin();
+    }
+
+    // ============================================================
+    // GIVEAWAY DRAWS COLLECTION
+    // ============================================================
+    match /giveawayDraws/{drawId} {
+      // Only admins can read, create, update, or delete giveaway draws
+      allow read, create, update, delete: if isAdmin();
+    }
+
+    // ============================================================
     // DENY ALL OTHER COLLECTIONS
     // ============================================================
     // Explicitly deny access to any other collections
