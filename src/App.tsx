@@ -24,8 +24,9 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfUse from "./pages/TermsOfUse";
 import Disclaimer from "./pages/Disclaimer";
 import Onboarding from "./pages/Onboarding";
+import Giveaway from "./pages/Giveaway";
 import NotFound from "./pages/NotFound";
-import AnalyticsTracker from "./components/AnalyticsTracker";
+import AnalyticsTracker from "@/components/AnalyticsTracker";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +50,7 @@ const AnimatedRoutes = () => {
           <Route path="/onboarding" element={<PageTransition><Onboarding /></PageTransition>} />
           <Route path="/calculator" element={<PageTransition><Calculator /></PageTransition>} />
           <Route path="/edit" element={<PageTransition><Calculator /></PageTransition>} />
+          <Route path="/giveaway" element={<PageTransition><Giveaway /></PageTransition>} />
           <Route path="/my-finances" element={<PageTransition><ProtectedRoute><Dashboard /></ProtectedRoute></PageTransition>} />
           <Route
             path="/dashboard"
