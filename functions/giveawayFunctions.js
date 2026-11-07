@@ -1,4 +1,4 @@
-const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { onCall, HttpsError, onRequest } = require('firebase-functions/v2/https');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getAuth } = require('firebase-admin/auth');
@@ -15,7 +15,6 @@ const TIME_ZONE = 'America/Moncton';
 const rateLimits = new Map();
 
 const normalizeEmail = (email) => String(email || '').trim().toLowerCase();
-
 const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 const getContestConfig = () => ({
@@ -45,6 +44,7 @@ const isContestOpen = (now = new Date()) => {
   if (!config.openingDateTime || !config.closingDateTime) {
     return false;
   }
+
   const start = new Date(config.openingDateTime).getTime();
   const end = new Date(config.closingDateTime).getTime();
   return Number.isFinite(start) && Number.isFinite(end) && now >= start && now < end;
@@ -57,10 +57,12 @@ const enforceRateLimit = (identifier) => {
   const current = rateLimits.get(identifier) || [];
   const valid = current.filter((ts) => ts > now - windowMs);
   valid.push(now);
+
   if (valid.length > limit) {
     rateLimits.set(identifier, valid);
     return false;
   }
+
   rateLimits.set(identifier, valid);
   return true;
 };
@@ -77,10 +79,34 @@ const getClientIdentifier = (context) => {
   return context?.rawRequest?.ip || 'anonymous';
 };
 
-exports.submitGiveawayEntry = onCall({
-  region: 'us-central1',
-  maxInstances: 10,
-}, async (request) => {
+const isCorsAllowedOrigin = (origin) => {
+  const allowed = new Set([
+    'https://budgetly-61182.firebaseapp.com',
+    'https://budgetly-61182.web.app',
+    'https://www.budgetly.finance',
+    'https://budgetly.finance',
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:3000',
+  ]);
+
+  if (!origin) return true;
+  return allowed.has(origin) || origin.endsWith('.budgetly.finance');
+};
+
+const setCorsHeaders = (res) => {
+  const origin = res?.req?.headers?.origin || '';
+  if (isCorsAllowedOrigin(origin)) {
+    res.set('Access-Control-Allow-Origin', origin || '*');
+    res.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.set('Access-Control-Allow-Credentials', 'true');
+  }
+  return res;
+};
+
+const submitGiveawayEntryHandler = async (request) => {
   const payload = request.data || {};
   const clientIdentifier = getClientIdentifier(request);
 
@@ -141,6 +167,37 @@ exports.submitGiveawayEntry = onCall({
   }
 
   return { status: 'accepted', entryId: result.entryId };
+};
+
+exports.submitGiveawayEntry = onCall({
+  region: 'us-central1',
+  maxInstances: 10,
+}, async (request) => submitGiveawayEntryHandler(request));
+
+exports.submitGiveawayEntryHttp = onRequest({
+  region: 'us-central1',
+  maxInstances: 10,
+}, async (req, res) => {
+  setCorsHeaders(res);
+
+  if (req.method === 'OPTIONS') {
+    res.status(204).send('');
+    return;
+  }
+
+  try {
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const request = {
+      data: body,
+      rawRequest: req,
+    };
+
+    const result = await submitGiveawayEntryHandler(request);
+    res.status(200).json(result);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unable to submit entry.';
+    res.status(400).json({ error: message });
+  }
 });
 
 exports.drawGiveawayWinner = onCall({
@@ -213,7 +270,6 @@ exports.drawGiveawayWinner = onCall({
 function cryptoRandomInt(min, max) {
   const range = max - min + 1;
   const bytesNeeded = 4;
-  const maxValue = 2 ** (bytesNeeded * 8) - 1;
   const randomBytes = require('node:crypto').randomBytes(bytesNeeded);
   const randomValue = randomBytes.readUInt32BE(0);
   return min + (randomValue % range);
